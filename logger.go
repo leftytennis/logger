@@ -35,15 +35,15 @@ const (
 
 // Logger is a custom log writer that adds a timestamp to each log entry
 type Logger struct {
-	Level LogLevel
-	File  *os.File
-	m     sync.RWMutex
+	Level  LogLevel
+	Output *os.File
+	m      sync.RWMutex
 }
 
 // Options are options for the Logger
 type Options struct {
-	Level LogLevel
-	Output  *os.File
+	Level  LogLevel
+	Output *os.File
 }
 
 func (l LogLevel) String() string {
@@ -67,17 +67,17 @@ func (l LogLevel) String() string {
 	}
 }
 
-func buildString(l LogLevel, a ...string) string {
+func buildString(l LogLevel, a ...any) string {
 	message := fmt.Sprintf(time.Now().Format(LogDateFormat)) + " " + l.String()
 	for _, v := range a {
-		message += " " + v
+		message += " " + v.(string)
 	}
 	return message
 }
 
 // New creates a new Logger
 func New() *Logger {
-	return &Logger{Level: LogLevelInfo, File: os.Stderr}
+	return &Logger{Level: LogLevelInfo, Output: os.Stderr}
 }
 
 // NewWithOptions creates a new Logger with options
@@ -88,7 +88,7 @@ func NewWithOptions(opts Options) *Logger {
 	if opts.Output == nil {
 		opts.Output = os.Stderr
 	}
-	return &Logger{Level: opts.Level, File: opts.Output}
+	return &Logger{Level: opts.Level, Output: opts.Output}
 }
 
 // SetLevel sets the log level
@@ -100,9 +100,9 @@ func (writer *Logger) SetLevel(level LogLevel) {
 // SetOutput sets the output file for the logger
 func (writer *Logger) SetOutput(file *os.File) {
 	if file == nil {
-		writer.File = os.Stderr
+		writer.Output = os.Stderr
 	} else {
-		writer.File = file
+		writer.Output = file
 	}
 	return
 }
@@ -110,7 +110,7 @@ func (writer *Logger) SetOutput(file *os.File) {
 // Write writes a log entry to an output file (default: os.Stderr)
 func (writer *Logger) Write(bytes []byte) (int, error) {
 
-	if writer.File == nil {
+	if writer.Output == nil {
 		panic("file is nil")
 	}
 
@@ -121,11 +121,11 @@ func (writer *Logger) Write(bytes []byte) (int, error) {
 		bytes = append(bytes, '\n')
 	}
 
-	return writer.File.Write(bytes)
+	return writer.Output.Write(bytes)
 }
 
 // Debug logs a debug message
-func (writer *Logger) Debug(a ...string) {
+func (writer *Logger) Debug(a ...any) {
 	if writer.Level >= LogLevelDebug {
 		message := buildString(LogLevelDebug, a...)
 		_, err := writer.Write([]byte(message))
@@ -137,7 +137,7 @@ func (writer *Logger) Debug(a ...string) {
 }
 
 // Debugln logs a debug message with a newline
-func (writer *Logger) Debugln(a ...string) {
+func (writer *Logger) Debugln(a ...any) {
 	writer.Debug(a...)
 	return
 }
@@ -155,7 +155,7 @@ func (writer *Logger) Debugf(format string, a ...any) {
 }
 
 // Error logs an error message
-func (writer *Logger) Error(a ...string) {
+func (writer *Logger) Error(a ...any) {
 	if writer.Level >= LogLevelError {
 		message := buildString(LogLevelError, a...)
 		_, err := writer.Write([]byte(message))
@@ -167,8 +167,8 @@ func (writer *Logger) Error(a ...string) {
 }
 
 // Errorln logs an error message with a newline
-func (writer *Logger) Errorln(message string) {
-	writer.Error(message)
+func (writer *Logger) Errorln(a ...any) {
+	writer.Error(a...)
 	return
 }
 
@@ -185,7 +185,7 @@ func (writer *Logger) Errorf(format string, a ...any) {
 }
 
 // Fatal logs a fatal message
-func (writer *Logger) Fatal(a ...string) {
+func (writer *Logger) Fatal(a ...any) {
 	message := buildString(LogLevelFatal, a...)
 	_, err := writer.Write([]byte(message))
 	if err != nil {
@@ -195,7 +195,7 @@ func (writer *Logger) Fatal(a ...string) {
 }
 
 // Fatalln logs a fatal message with a newline
-func (writer *Logger) Fatalln(a ...string) {
+func (writer *Logger) Fatalln(a ...any) {
 	writer.Fatal(a...)
 	return
 }
@@ -211,7 +211,7 @@ func (writer *Logger) Fatalf(format string, a ...any) {
 }
 
 // Info logs an info message
-func (writer *Logger) Info(a ...string) {
+func (writer *Logger) Info(a ...any) {
 	if writer.Level >= LogLevelInfo {
 		message := buildString(LogLevelInfo, a...)
 		_, err := writer.Write([]byte(message))
@@ -223,7 +223,7 @@ func (writer *Logger) Info(a ...string) {
 }
 
 // Infoln logs an info message with a newline
-func (writer *Logger) Infoln(a ...string) {
+func (writer *Logger) Infoln(a ...any) {
 	writer.Info(a...)
 	return
 }
@@ -241,7 +241,7 @@ func (writer *Logger) Infof(format string, a ...any) {
 }
 
 // Warn logs a warning message
-func (writer *Logger) Warn(a ...string) {
+func (writer *Logger) Warn(a ...any) {
 	if writer.Level >= LogLevelWarn {
 		message := buildString(LogLevelWarn, a...)
 		_, err := writer.Write([]byte(message))
@@ -253,7 +253,7 @@ func (writer *Logger) Warn(a ...string) {
 }
 
 // Warnln logs a warning message with a newline
-func (writer *Logger) Warnln(a ...string) {
+func (writer *Logger) Warnln(a ...any) {
 	writer.Warn(a...)
 	return
 }
