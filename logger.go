@@ -43,32 +43,32 @@ type Logger struct {
 // Options are options for the Logger
 type Options struct {
 	Level LogLevel
-	File  *os.File
+	Output  *os.File
 }
 
 func (l LogLevel) String() string {
 	switch l {
 	case LogLevelNone:
-		return "   "
+		return " "
 	case LogLevelFatal:
-		return " F "
+		return "F"
 	case LogLevelInfo:
-		return " I "
+		return "I"
 	case LogLevelWarn:
-		return " W "
+		return "W"
 	case LogLevelError:
-		return " E "
+		return "E"
 	case LogLevelDebug:
-		return " D "
+		return "D"
 	case LogLevelTrace:
-		return " T "
+		return "T"
 	default:
-		return " U "
+		return "U"
 	}
 }
 
 func buildString(l LogLevel, a ...string) string {
-	message := fmt.Sprintf(time.Now().Format(LogDateFormat)) + l.String()
+	message := fmt.Sprintf(time.Now().Format(LogDateFormat)) + " " + l.String()
 	for _, v := range a {
 		message += " " + v
 	}
@@ -85,10 +85,10 @@ func NewWithOptions(opts Options) *Logger {
 	if opts.Level == 0 {
 		opts.Level = LogLevelInfo
 	}
-	if opts.File == nil {
-		opts.File = os.Stderr
+	if opts.Output == nil {
+		opts.Output = os.Stderr
 	}
-	return &Logger{Level: opts.Level, File: opts.File}
+	return &Logger{Level: opts.Level, File: opts.Output}
 }
 
 // SetLevel sets the log level
