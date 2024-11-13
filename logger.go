@@ -49,28 +49,36 @@ type Options struct {
 func (l LogLevel) String() string {
 	switch l {
 	case LogLevelNone:
-		return " "
+		return "None"
 	case LogLevelFatal:
-		return "F"
+		return "Fatal"
 	case LogLevelInfo:
-		return "I"
+		return "Info"
 	case LogLevelWarn:
-		return "W"
+		return "Warn"
 	case LogLevelError:
-		return "E"
+		return "Error"
 	case LogLevelDebug:
-		return "D"
+		return "Debug"
 	case LogLevelTrace:
-		return "T"
+		return "Trace"
 	default:
-		return "U"
+		return "Unknown"
 	}
 }
 
-func buildString(l LogLevel, a ...any) string {
-	message := fmt.Sprintf(time.Now().Format(LogDateFormat)) + " " + l.String()
+// buildMessage builds a log message with a prefix and args passed to it
+// The arguments are separated by a space
+func buildMessage(l LogLevel, a ...any) string {
+	if l == LogLevelNone {
+		return ""
+	}
+	message := fmt.Sprintf(time.Now().Format(LogDateFormat)) + " " + l.String()[0:1]
 	for _, v := range a {
 		message += " " + v.(string)
+	}
+	if message[len(message)-1] != ' ' {
+		message += " "
 	}
 	return message
 }
@@ -94,20 +102,22 @@ func NewWithOptions(opts Options) *Logger {
 // SetLevel sets the log level
 func (writer *Logger) SetLevel(level LogLevel) {
 	writer.m.Lock()
-	defer writer.m.Unlock()
 	writer.Level = level
+	writer.m.Unlock()
+	writer.Debugf("Log level set to %s", level.String())
 	return
 }
 
 // SetOutput sets the output file for the logger
 func (writer *Logger) SetOutput(file *os.File) {
 	writer.m.Lock()
-	defer writer.m.Unlock()
 	if file == nil {
 		writer.Output = os.Stderr
 	} else {
 		writer.Output = file
 	}
+	writer.m.Unlock()
+	writer.Debugf("Output set to %s\n", file.Name())
 	return
 }
 
@@ -131,18 +141,12 @@ func (writer Logger) Write(bytes []byte) (int, error) {
 // Debug logs a debug message
 func (writer Logger) Debug(a ...any) {
 	if writer.Level >= LogLevelDebug {
-		message := buildString(LogLevelDebug, a...)
+		message := buildMessage(LogLevelDebug, a...)
 		_, err := writer.Write([]byte(message))
 		if err != nil {
 			panic(err)
 		}
 	}
-	return
-}
-
-// Debugln logs a debug message with a newline
-func (writer Logger) Debugln(a ...any) {
-	writer.Debug(a...)
 	return
 }
 
@@ -161,18 +165,12 @@ func (writer Logger) Debugf(format string, a ...any) {
 // Error logs an error message
 func (writer Logger) Error(a ...any) {
 	if writer.Level >= LogLevelError {
-		message := buildString(LogLevelError, a...)
+		message := buildMessage(LogLevelError, a...)
 		_, err := writer.Write([]byte(message))
 		if err != nil {
 			panic(err)
 		}
 	}
-	return
-}
-
-// Errorln logs an error message with a newline
-func (writer Logger) Errorln(a ...any) {
-	writer.Error(a...)
 	return
 }
 
@@ -190,18 +188,12 @@ func (writer Logger) Errorf(format string, a ...any) {
 
 // Fatal logs a fatal message
 func (writer Logger) Fatal(a ...any) {
-	message := buildString(LogLevelFatal, a...)
+	message := buildMessage(LogLevelFatal, a...)
 	_, err := writer.Write([]byte(message))
 	if err != nil {
 		panic(err)
 	}
 	os.Exit(1)
-}
-
-// Fatalln logs a fatal message with a newline
-func (writer Logger) Fatalln(a ...any) {
-	writer.Fatal(a...)
-	return
 }
 
 // Fatalf logs a fatal message with a format string
@@ -217,18 +209,12 @@ func (writer Logger) Fatalf(format string, a ...any) {
 // Info logs an info message
 func (writer Logger) Info(a ...any) {
 	if writer.Level >= LogLevelInfo {
-		message := buildString(LogLevelInfo, a...)
+		message := buildMessage(LogLevelInfo, a...)
 		_, err := writer.Write([]byte(message))
 		if err != nil {
 			panic(err)
 		}
 	}
-	return
-}
-
-// Infoln logs an info message with a newline
-func (writer Logger) Infoln(a ...any) {
-	writer.Info(a...)
 	return
 }
 
@@ -247,18 +233,12 @@ func (writer Logger) Infof(format string, a ...any) {
 // Warn logs a warning message
 func (writer Logger) Warn(a ...any) {
 	if writer.Level >= LogLevelWarn {
-		message := buildString(LogLevelWarn, a...)
+		message := buildMessage(LogLevelWarn, a...)
 		_, err := writer.Write([]byte(message))
 		if err != nil {
 			panic(err)
 		}
 	}
-	return
-}
-
-// Warnln logs a warning message with a newline
-func (writer Logger) Warnln(a ...any) {
-	writer.Warn(a...)
 	return
 }
 
