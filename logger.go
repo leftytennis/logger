@@ -12,20 +12,20 @@ import (
 type LogLevel int
 
 const (
-	// LogLevelNone is the lowest log level and will not log anything
-	LogLevelNone LogLevel = iota
-	// LogLevelInfo is the log level for info messages
-	LogLevelInfo = 1 << iota
-	// LogLevelWarn is the log level for warning messages
-	LogLevelWarn
-	// LogLevelError is the log level for error messages
-	LogLevelError
-	// LogLevelDebug is the log level for debug messages
-	LogLevelDebug
 	// LogLevelTrace is the log level for trace messages
-	LogLevelTrace
+	LogLevelTrace = -8
+	// LogLevelDebug is the log level for debug messages
+	LogLevelDebug = -4
+	// LogLevelInfo is the log level for info messages
+	LogLevelInfo = 0
+	// LogLevelWarn is the log level for warning messages
+	LogLevelWarn = 4
+	// LogLevelError is the log level for error messages
+	LogLevelError = 8
 	// LogLevelFatal is the highest log level and will log fatal messages
-	LogLevelFatal
+	LogLevelFatal = 16
+	// LogLevelNone is the log level for no messages
+	LogLevelNone = 32
 )
 
 const (
@@ -48,20 +48,20 @@ type Options struct {
 
 func (l LogLevel) String() string {
 	switch l {
-	case LogLevelNone:
-		return "None"
-	case LogLevelFatal:
-		return "Fatal"
+	case LogLevelTrace:
+		return "Trace"
+	case LogLevelDebug:
+		return "Debug"
 	case LogLevelInfo:
 		return "Info"
 	case LogLevelWarn:
 		return "Warn"
 	case LogLevelError:
 		return "Error"
-	case LogLevelDebug:
-		return "Debug"
-	case LogLevelTrace:
-		return "Trace"
+	case LogLevelFatal:
+		return "Fatal"
+	case LogLevelNone:
+		return "None"
 	default:
 		return "Unknown"
 	}
@@ -70,16 +70,17 @@ func (l LogLevel) String() string {
 // buildMessage builds a log message with a prefix and args passed to it
 // The arguments are separated by a space
 func buildMessage(l LogLevel, a ...any) string {
-	if l == LogLevelNone {
-		return ""
-	}
+
 	message := fmt.Sprintf(time.Now().Format(LogDateFormat)) + " " + l.String()[0:1]
+
 	for _, v := range a {
 		message += " " + v.(string)
 	}
+
 	if message[len(message)-1] != ' ' {
 		message += " "
 	}
+
 	return message
 }
 
@@ -90,34 +91,43 @@ func New() *Logger {
 
 // NewWithOptions creates a new Logger with options
 func NewWithOptions(opts Options) *Logger {
+
 	if opts.Level == 0 {
 		opts.Level = LogLevelInfo
 	}
+
 	if opts.Output == nil {
 		opts.Output = os.Stderr
 	}
+
 	return &Logger{Level: opts.Level, Output: opts.Output, m: &sync.Mutex{}}
 }
 
 // SetLevel sets the log level
 func (writer *Logger) SetLevel(level LogLevel) {
+
 	writer.m.Lock()
 	writer.Level = level
 	writer.m.Unlock()
-	writer.Debugf("Log level set to %s", level.String())
+	writer.Infof("log level set to %s\n", level.String())
+
 	return
 }
 
 // SetOutput sets the output file for the logger
 func (writer *Logger) SetOutput(file *os.File) {
+
 	writer.m.Lock()
+
 	if file == nil {
 		writer.Output = os.Stderr
 	} else {
 		writer.Output = file
 	}
+
 	writer.m.Unlock()
-	writer.Debugf("Output set to %s\n", file.Name())
+	writer.Debugf("output set to %s\n", file.Name())
+
 	return
 }
 
@@ -140,121 +150,144 @@ func (writer Logger) Write(bytes []byte) (int, error) {
 
 // Debug logs a debug message
 func (writer Logger) Debug(a ...any) {
-	if writer.Level >= LogLevelDebug {
+
+	if writer.Level <= LogLevelDebug {
 		message := buildMessage(LogLevelDebug, a...)
 		_, err := writer.Write([]byte(message))
 		if err != nil {
 			panic(err)
 		}
 	}
+
 	return
 }
 
 // Debugf logs a debug message with a format string
 func (writer Logger) Debugf(format string, a ...any) {
-	if writer.Level >= LogLevelDebug {
+
+	if writer.Level <= LogLevelDebug {
 		msg := fmt.Sprintf(time.Now().Format(LogDateFormat)+" D "+format, a...)
 		_, err := writer.Write([]byte(msg))
 		if err != nil {
 			panic(err)
 		}
 	}
+
 	return
 }
 
 // Error logs an error message
 func (writer Logger) Error(a ...any) {
-	if writer.Level >= LogLevelError {
+
+	if writer.Level <= LogLevelError {
 		message := buildMessage(LogLevelError, a...)
 		_, err := writer.Write([]byte(message))
 		if err != nil {
 			panic(err)
 		}
 	}
+
 	return
 }
 
 // Errorf logs an error message with a format string
 func (writer Logger) Errorf(format string, a ...any) {
-	if writer.Level >= LogLevelError {
+
+	if writer.Level <= LogLevelError {
 		msg := fmt.Sprintf(time.Now().Format(LogDateFormat)+" E "+format, a...)
 		_, err := writer.Write([]byte(msg))
 		if err != nil {
 			panic(err)
 		}
 	}
+
 	return
 }
 
 // Fatal logs a fatal message
 func (writer Logger) Fatal(a ...any) {
+
 	message := buildMessage(LogLevelFatal, a...)
 	_, err := writer.Write([]byte(message))
+
 	if err != nil {
 		panic(err)
 	}
+
 	os.Exit(1)
 }
 
 // Fatalf logs a fatal message with a format string
 func (writer Logger) Fatalf(format string, a ...any) {
+
 	msg := fmt.Sprintf(time.Now().Format(LogDateFormat)+" F "+format, a...)
 	_, err := writer.Write([]byte(msg))
+
 	if err != nil {
 		panic(err)
 	}
+
 	os.Exit(1)
 }
 
 // Info logs an info message
 func (writer Logger) Info(a ...any) {
-	if writer.Level >= LogLevelInfo {
+
+	if writer.Level <= LogLevelInfo {
 		message := buildMessage(LogLevelInfo, a...)
 		_, err := writer.Write([]byte(message))
 		if err != nil {
 			panic(err)
 		}
 	}
+
 	return
 }
 
 // Infof logs an info message with a format string
 func (writer Logger) Infof(format string, a ...any) {
-	if writer.Level >= LogLevelInfo {
+
+	if writer.Level <= LogLevelInfo {
 		msg := fmt.Sprintf(time.Now().Format(LogDateFormat)+" I "+format, a...)
 		_, err := writer.Write([]byte(msg))
 		if err != nil {
 			panic(err)
 		}
 	}
+
 	return
 }
 
 // Trace logs a trace message
 func (writer Logger) Trace(a ...any) {
-	if writer.Level >= LogLevelTrace {
+
+	if writer.Level == LogLevelTrace {
 		message := buildMessage(LogLevelTrace, a...)
 		_, err := writer.Write([]byte(message))
 		if err != nil {
 			panic(err)
 		}
 	}
+
 	return
 }
 
 // Tracef logs a warning message with a format string
 func (writer Logger) Tracef(format string, a ...any) {
-	if writer.Level >= LogLevelTrace {
+
+	if writer.Level == LogLevelTrace {
 		msg := fmt.Sprintf(time.Now().Format(LogDateFormat)+" T "+format, a...)
 		_, err := writer.Write([]byte(msg))
 		if err != nil {
 			panic(err)
 		}
 	}
+
 	return
 }
 // Warn logs a warning message
 func (writer Logger) Warn(a ...any) {
+
 	if writer.Level >= LogLevelWarn {
 		message := buildMessage(LogLevelWarn, a...)
 		_, err := writer.Write([]byte(message))
@@ -262,11 +295,13 @@ func (writer Logger) Warn(a ...any) {
 			panic(err)
 		}
 	}
+
 	return
 }
 
 // Warnf logs a warning message with a format string
 func (writer Logger) Warnf(format string, a ...any) {
+
 	if writer.Level >= LogLevelWarn {
 		msg := fmt.Sprintf(time.Now().Format(LogDateFormat)+" W "+format, a...)
 		_, err := writer.Write([]byte(msg))
@@ -274,5 +309,6 @@ func (writer Logger) Warnf(format string, a ...any) {
 			panic(err)
 		}
 	}
+	
 	return
 }
