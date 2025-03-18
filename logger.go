@@ -230,6 +230,29 @@ func (writer Logger) Infof(format string, a ...any) {
 	return
 }
 
+// Trace logs a trace message
+func (writer Logger) Trace(a ...any) {
+	if writer.Level >= LogLevelTrace {
+		message := buildMessage(LogLevelTrace, a...)
+		_, err := writer.Write([]byte(message))
+		if err != nil {
+			panic(err)
+		}
+	}
+	return
+}
+
+// Tracef logs a warning message with a format string
+func (writer Logger) Tracef(format string, a ...any) {
+	if writer.Level >= LogLevelTrace {
+		msg := fmt.Sprintf(time.Now().Format(LogDateFormat)+" T "+format, a...)
+		_, err := writer.Write([]byte(msg))
+		if err != nil {
+			panic(err)
+		}
+	}
+	return
+}
 // Warn logs a warning message
 func (writer Logger) Warn(a ...any) {
 	if writer.Level >= LogLevelWarn {
