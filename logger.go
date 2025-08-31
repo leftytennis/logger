@@ -34,7 +34,7 @@ const (
 	LogDateFormat string = "2006-01-02 15:04:05.000 MST"
 )
 
-var logFatal = Logger.Fatal
+// var logFatal = Logger.Fatal
 
 // Logger is a custom log writer that adds a timestamp to each log entry
 type Logger struct {
@@ -93,6 +93,11 @@ func buildMessage(l LogLevel, a ...any) string {
 	}
 
 	message = strings.TrimRight(message, " ")
+	
+	if len(message) == 0 {
+		message += prefix + "\n"
+	}
+
 	// if message[len(message)-1] != ' ' {
 	// 	message += " "
 	// }
@@ -145,7 +150,7 @@ func (writer *Logger) SetOutput(file *os.File) {
 
 }
 
-// Write writes a log entry to an output file (default: os.Stderr)
+// Write writes a log entry to an output file (default: os.Stdout)
 func (writer Logger) Write(bytes []byte) (int, error) {
 
 	if writer.Output == nil {
