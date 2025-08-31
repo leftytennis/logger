@@ -41,7 +41,6 @@ func TestNewLogger(t *testing.T) {
 		t.Errorf("Expected default output to be os.Stderr, got %v", logr.Output)
 	}
 
-	return
 }
 
 func TestNewWithOptions(t *testing.T) {
@@ -61,7 +60,6 @@ func TestNewWithOptions(t *testing.T) {
 		t.Errorf("Expected output to be os.Stdout, got %v", logr.Output)
 	}
 
-	return
 }
 
 func TestSetLevel(t *testing.T) {
@@ -73,7 +71,6 @@ func TestSetLevel(t *testing.T) {
 		t.Errorf("Expected log level to be LogLevelError, got %v", logr.Level)
 	}
 
-	return
 }
 
 func TestSetOutput(t *testing.T) {
@@ -93,7 +90,6 @@ func TestSetOutput(t *testing.T) {
 		t.Errorf("Expected output to be temp file, got %v", logr.Output)
 	}
 
-	return
 }
 
 func TestDebug(_ /*t*/ *testing.T) {
@@ -103,7 +99,6 @@ func TestDebug(_ /*t*/ *testing.T) {
 	logr.Debug("Debug message")
 	logr.Debug("Debug message\nwith newline")
 
-	return
 }
 
 func TestDebugf(_ /*t*/ *testing.T) {
@@ -113,7 +108,6 @@ func TestDebugf(_ /*t*/ *testing.T) {
 	logr.Debugf("Debug message %s", "formatted")
 	logr.Debugf("Debug message %s\nwith newline", "formatted")
 
-	return
 }
 
 func TestDebugLevel(_ /*t*/ *testing.T) {
@@ -127,7 +121,6 @@ func TestDebugLevel(_ /*t*/ *testing.T) {
 	logr.Warn("TestDebugLevel warn message")
 	logr.Error("TestDebugLevel error message")
 
-	return
 }
 
 func TestError(_ /*t*/ *testing.T) {
@@ -137,7 +130,6 @@ func TestError(_ /*t*/ *testing.T) {
 	logr.Error("Error message")
 	logr.Error("Error message\nwith newline")
 
-	return
 }
 
 func TestErrorf(_ /*t*/ *testing.T) {
@@ -147,7 +139,6 @@ func TestErrorf(_ /*t*/ *testing.T) {
 	logr.Errorf("Error message: %s", "formatted")
 	logr.Errorf("Error message: %s\nwith newline", "formatted")
 
-	return
 }
 
 func TestErrorLevel(_ /*t*/ *testing.T) {
@@ -161,7 +152,6 @@ func TestErrorLevel(_ /*t*/ *testing.T) {
 	logr.Warn("TestErrorLevel warn message")
 	logr.Error("TestErrorLevel error message")
 
-	return
 }
 
 func TestInfo(_ /*t*/ *testing.T) {
@@ -172,7 +162,6 @@ func TestInfo(_ /*t*/ *testing.T) {
 	logr.Info("Info message\nwith newline")
 	logr.Info("Info message\nwith newline\nwith more newlines")
 
-	return
 }
 
 func TestInfof(_ /*t*/ *testing.T) {
@@ -182,7 +171,6 @@ func TestInfof(_ /*t*/ *testing.T) {
 	logr.Infof("Info message: %s", "formatted")
 	logr.Infof("Info message: %s\nwith newline", "formatted")
 
-	return
 }
 
 func TestInfoLevel(_ /*t*/ *testing.T) {
@@ -196,7 +184,6 @@ func TestInfoLevel(_ /*t*/ *testing.T) {
 	logr.Warn("TestInfoLevel warn message")
 	logr.Error("TestInfoLevel error message")
 
-	return
 }
 
 func TestTrace(_ /*t*/ *testing.T) {
@@ -206,7 +193,6 @@ func TestTrace(_ /*t*/ *testing.T) {
 	logr.Trace("Trace message")
 	logr.Trace("Trace message\nwith newline")
 
-	return
 }
 
 func TestTracef(_ /*t*/ *testing.T) {
@@ -216,7 +202,6 @@ func TestTracef(_ /*t*/ *testing.T) {
 	logr.Tracef("Trace message: %s", "formatted")
 	logr.Tracef("Trace message: %s\nwith newline", "formatted")
 
-	return
 }
 
 func TestTraceLevel(_ /*t*/ *testing.T) {
@@ -230,7 +215,6 @@ func TestTraceLevel(_ /*t*/ *testing.T) {
 	logr.Warn("TestTraceLevel warn message")
 	logr.Error("TestTraceLevel error message")
 
-	return
 }
 
 func TestVerbose(_ /*t*/ *testing.T) {
@@ -240,7 +224,6 @@ func TestVerbose(_ /*t*/ *testing.T) {
 	logr.Verbose("Verbose message")
 	logr.Verbose("Verbose message\nwith newline")
 
-	return
 }
 
 func TestVerbosef(_ /*t*/ *testing.T) {
@@ -250,7 +233,6 @@ func TestVerbosef(_ /*t*/ *testing.T) {
 	logr.Verbosef("Verbose message %s", "formatted")
 	logr.Verbosef("Verbose message %s\nwith newline", "formatted")
 
-	return
 }
 
 func TestVerboseLevel(_ /*t*/ *testing.T) {
@@ -264,7 +246,6 @@ func TestVerboseLevel(_ /*t*/ *testing.T) {
 	logr.Warn("TestVerboseLevel warn message")
 	logr.Error("TestVerboseLevel error message")
 
-	return
 }
 
 func TestWarn(_ /*t*/ *testing.T) {
@@ -274,7 +255,6 @@ func TestWarn(_ /*t*/ *testing.T) {
 	logr.Warn("Warning message")
 	logr.Warn("Warning message\nwith newline")
 
-	return
 }
 
 func TestWarnf(_ /*t*/ *testing.T) {
@@ -284,7 +264,6 @@ func TestWarnf(_ /*t*/ *testing.T) {
 	logr.Warnf("Warning message: %s", "formatted")
 	logr.Warnf("Warning message: %s\nwith newline", "formatted")
 
-	return
 }
 
 func TestWarnLevel(_ /*t*/ *testing.T) {
@@ -298,7 +277,6 @@ func TestWarnLevel(_ /*t*/ *testing.T) {
 	logr.Warn("TestWarnLevel warn message")
 	logr.Error("TestWarnLevel error message")
 
-	return
 }
 
 // func TestFatal(_ /*t*/ *testing.T) {
@@ -340,5 +318,4 @@ func TestJSON(t *testing.T) {
 
 	logr.Infof("Pretty JSON:\n%s", string(prettyJSON))
 
-	return
 }

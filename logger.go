@@ -127,7 +127,6 @@ func (writer *Logger) SetLevel(level LogLevel) {
 	writer.m.Unlock()
 	writer.Infof("log level set to %s\n", level.String())
 
-	return
 }
 
 // SetOutput sets the output file for the logger
@@ -144,7 +143,6 @@ func (writer *Logger) SetOutput(file *os.File) {
 	writer.m.Unlock()
 	writer.Debugf("output set to %s\n", file.Name())
 
-	return
 }
 
 // Write writes a log entry to an output file (default: os.Stderr)
@@ -175,7 +173,6 @@ func (writer Logger) Debug(a ...any) {
 		}
 	}
 
-	return
 }
 
 // Debugf logs a debug message with a format string
@@ -190,7 +187,6 @@ func (writer Logger) Debugf(format string, a ...any) {
 		}
 	}
 
-	return
 }
 
 // Error logs an error message
@@ -204,7 +200,6 @@ func (writer Logger) Error(a ...any) {
 		}
 	}
 
-	return
 }
 
 // Errorf logs an error message with a format string
@@ -219,7 +214,6 @@ func (writer Logger) Errorf(format string, a ...any) {
 		}
 	}
 
-	return
 }
 
 // Fatal logs a fatal message
@@ -260,7 +254,6 @@ func (writer Logger) Info(a ...any) {
 		}
 	}
 
-	return
 }
 
 // Infof logs an info message with a format string
@@ -275,7 +268,6 @@ func (writer Logger) Infof(format string, a ...any) {
 		}
 	}
 
-	return
 }
 
 // Trace logs a trace message
@@ -289,7 +281,6 @@ func (writer Logger) Trace(a ...any) {
 		}
 	}
 
-	return
 }
 
 // Tracef logs a warning message with a format string
@@ -304,7 +295,6 @@ func (writer Logger) Tracef(format string, a ...any) {
 		}
 	}
 
-	return
 }
 
 // Verbose logs a verbose message
@@ -318,7 +308,6 @@ func (writer Logger) Verbose(a ...any) {
 		}
 	}
 
-	return
 }
 
 // Verbosef logs a verbose message with a format string
@@ -333,7 +322,6 @@ func (writer Logger) Verbosef(format string, a ...any) {
 		}
 	}
 
-	return
 }
 
 // Warn logs a warning message
@@ -347,7 +335,6 @@ func (writer Logger) Warn(a ...any) {
 		}
 	}
 
-	return
 }
 
 // Warnf logs a warning message with a format string
@@ -362,5 +349,4 @@ func (writer Logger) Warnf(format string, a ...any) {
 		}
 	}
 
-	return
 }
