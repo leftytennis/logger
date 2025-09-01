@@ -121,12 +121,14 @@ func buildMessage(l LogLevel, a ...any) string {
 }
 
 // FromContext returns a pointer to the logger from a context
-func FromContext(ctx context.Context) *Logger {
+func FromContext(ctxParent context.Context) *Logger {
 
-	if value, exists := ctx.Value(loggerKey).(*Logger); exists {
+	// return logger pointer if it's in the context
+	if value, exists := ctxParent.Value(loggerKey).(*Logger); exists {
 		return value
 	}
 
+	// return nil if logger is not found
 	return nil
 }
 
@@ -139,7 +141,7 @@ func New(ctx context.Context) *Logger {
 }
 
 // NewWithOptions creates a new Logger with options
-func NewWithOptions(ctx context.Context, opts Options) *Logger {
+func NewWithOptions(ctxParent context.Context, opts Options) *Logger {
 
 	if opts.Level == 0 {
 		opts.Level = LogLevelInfo
@@ -149,13 +151,15 @@ func NewWithOptions(ctx context.Context, opts Options) *Logger {
 		opts.Output = os.Stderr
 	}
 
+	// Create new logger
 	log := &Logger{
 		Level:   opts.Level,
 		Output:  opts.Output,
 		m:       &sync.Mutex{},
 	}
 
-	ctx = WithContext(ctx, log)
+	// create new context and store logger value
+	ctx = WithContext(ctxParent, log)
 
 	return log
 }

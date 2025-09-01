@@ -3,6 +3,7 @@ package logger
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 )
@@ -12,7 +13,13 @@ func TestMain(m *testing.M) {
 	// ...
 
 	// Initialize logger
-	logr := New(context.Background())
+	logr := New(ctx)
+	
+	ctx = WithContext(context.TODO(), logr)
+
+	value := FromContext(ctx)
+	fmt.Printf("%v", value)
+
 	logr.SetLevel(LogLevelDebug)
 
 	// Run tests
@@ -33,6 +40,13 @@ func TestNewLogger(t *testing.T) {
 
 	if logr == nil {
 		t.Fatal("Expected a valid Logger instance, got nil")
+	}
+
+	ctx = WithContext(ctx, logr)
+	
+	logrValue := FromContext(ctx)
+	if logrValue == nil {
+		t.Fatal("Expected a valid Logger instance from context, got nil")
 	}
 
 	if logr.Level != LogLevelInfo {
