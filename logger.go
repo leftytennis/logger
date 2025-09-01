@@ -2,15 +2,20 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"sync"
 	"time"
+	// "github.com/leftytennis/logger"
 )
 
 // LogLevel is a type for log levels
 type LogLevel int
+
+// loggerKey is a type for the logger key stored in a context
+type loggerKeyType struct{}
 
 const (
 	// LogLevelFatal is the highest log level and will log fatal messages
@@ -34,19 +39,29 @@ const (
 	LogDateFormat string = "2006-01-02 15:04:05.000 MST"
 )
 
+var (
+	ctx       context.Context
+	loggerKey = loggerKeyType{}
+)
+
 // var logFatal = Logger.Fatal
 
 // Logger is a custom log writer that adds a timestamp to each log entry
 type Logger struct {
-	Level  LogLevel
-	Output *os.File
-	m      *sync.Mutex
+	Context context.Context
+	Level   LogLevel
+	Output  *os.File
+	m       *sync.Mutex
 }
 
 // Options are options for the Logger
 type Options struct {
-	Level  LogLevel
-	Output *os.File
+	Level   LogLevel
+	Output  *os.File
+}
+
+func init() {
+	ctx = context.TODO()
 }
 
 func (l LogLevel) String() string {
@@ -93,7 +108,7 @@ func buildMessage(l LogLevel, a ...any) string {
 	}
 
 	message = strings.TrimRight(message, " ")
-	
+
 	if len(message) == 0 {
 		message += prefix + "\n"
 	}
@@ -105,13 +120,26 @@ func buildMessage(l LogLevel, a ...any) string {
 	return message
 }
 
+// FromContext returns a pointer to the logger from a context
+func FromContext(ctx context.Context) *Logger {
+
+	if value, exists := ctx.Value(loggerKey).(*Logger); exists {
+		return value
+	}
+
+	return nil
+}
+
 // New creates a new Logger
-func New() *Logger {
-	return &Logger{Level: LogLevelInfo, Output: os.Stderr, m: &sync.Mutex{}}
+func New(ctx context.Context) *Logger {
+	return NewWithOptions(ctx, Options{
+		Level:   LogLevelInfo,
+		Output:  os.Stderr,
+	})
 }
 
 // NewWithOptions creates a new Logger with options
-func NewWithOptions(opts Options) *Logger {
+func NewWithOptions(ctx context.Context, opts Options) *Logger {
 
 	if opts.Level == 0 {
 		opts.Level = LogLevelInfo
@@ -121,7 +149,34 @@ func NewWithOptions(opts Options) *Logger {
 		opts.Output = os.Stderr
 	}
 
-	return &Logger{Level: opts.Level, Output: opts.Output, m: &sync.Mutex{}}
+	log := &Logger{
+		Level:   opts.Level,
+		Output:  opts.Output,
+		m:       &sync.Mutex{},
+	}
+
+	ctx = WithContext(ctx, log)
+
+	return log
+}
+
+// WithContext returns a copy of the logger with the context set to ctx
+func WithContext(ctxParent context.Context, log *Logger) context.Context {
+
+	var value *Logger
+	var exists bool
+
+	// see if context already has the logger
+	if value, exists = ctxParent.Value(loggerKey).(*Logger); exists {
+		if value == log {
+			return ctxParent
+		}
+	}
+
+	// create a new context that has the logger value
+	ctx := context.WithValue(ctxParent, loggerKey, log)
+
+	return ctx
 }
 
 // SetLevel sets the log level

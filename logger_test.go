@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"testing"
@@ -11,7 +12,7 @@ func TestMain(m *testing.M) {
 	// ...
 
 	// Initialize logger
-	logr := New()
+	logr := New(context.Background())
 	logr.SetLevel(LogLevelDebug)
 
 	// Run tests
@@ -25,9 +26,10 @@ func TestMain(m *testing.M) {
 
 func TestNewLogger(t *testing.T) {
 
+	ctx := context.TODO()
 	opts := Options{}
 
-	logr := NewWithOptions(opts)
+	logr := NewWithOptions(ctx, opts)
 
 	if logr == nil {
 		t.Fatal("Expected a valid Logger instance, got nil")
@@ -50,7 +52,7 @@ func TestNewWithOptions(t *testing.T) {
 		Output: os.Stdout,
 	}
 
-	logr := NewWithOptions(opts)
+	logr := NewWithOptions(ctx, opts)
 
 	if logr.Level != LogLevelDebug {
 		t.Errorf("Expected log level to be LogLevelDebug, got %v", logr.Level)
@@ -64,7 +66,7 @@ func TestNewWithOptions(t *testing.T) {
 
 func TestSetLevel(t *testing.T) {
 
-	logr := New()
+	logr := New(context.Background())
 	logr.SetLevel(LogLevelError)
 
 	if logr.Level != LogLevelError {
@@ -75,7 +77,7 @@ func TestSetLevel(t *testing.T) {
 
 func TestSetOutput(t *testing.T) {
 
-	logr := New()
+	logr := New(context.Background())
 	tempFile, err := os.CreateTemp("", "testlog")
 
 	if err != nil {
@@ -94,7 +96,7 @@ func TestSetOutput(t *testing.T) {
 
 func TestDebug(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelDebug, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, Output: os.Stderr})
 
 	logr.Debug("Debug message")
 	logr.Debug("Debug message\nwith newline")
@@ -103,7 +105,7 @@ func TestDebug(_ /*t*/ *testing.T) {
 
 func TestDebugf(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelDebug, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, Output: os.Stderr})
 
 	logr.Debugf("Debug message %s", "formatted")
 	logr.Debugf("Debug message %s\nwith newline", "formatted")
@@ -112,7 +114,7 @@ func TestDebugf(_ /*t*/ *testing.T) {
 
 func TestDebugLevel(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelDebug, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, Output: os.Stderr})
 
 	logr.Trace("TestDebugLevel trace message")
 	logr.Debug("TestDebugLevel debug message")
@@ -125,7 +127,7 @@ func TestDebugLevel(_ /*t*/ *testing.T) {
 
 func TestError(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelError, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelError, Output: os.Stderr})
 
 	logr.Error("Error message")
 	logr.Error("Error message\nwith newline")
@@ -134,7 +136,7 @@ func TestError(_ /*t*/ *testing.T) {
 
 func TestErrorf(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelError, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelError, Output: os.Stderr})
 
 	logr.Errorf("Error message: %s", "formatted")
 	logr.Errorf("Error message: %s\nwith newline", "formatted")
@@ -143,7 +145,7 @@ func TestErrorf(_ /*t*/ *testing.T) {
 
 func TestErrorLevel(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelError, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelError, Output: os.Stderr})
 
 	logr.Trace("TestErrorLevel trace message")
 	logr.Debug("TestErrorLevel debug message")
@@ -156,7 +158,7 @@ func TestErrorLevel(_ /*t*/ *testing.T) {
 
 func TestInfo(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelInfo, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelInfo, Output: os.Stderr})
 
 	logr.Info("Info message")
 	logr.Info("Info message\nwith newline")
@@ -166,7 +168,7 @@ func TestInfo(_ /*t*/ *testing.T) {
 
 func TestInfof(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelInfo, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelInfo, Output: os.Stderr})
 
 	logr.Infof("Info message: %s", "formatted")
 	logr.Infof("Info message: %s\nwith newline", "formatted")
@@ -175,7 +177,7 @@ func TestInfof(_ /*t*/ *testing.T) {
 
 func TestInfoLevel(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelInfo, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelInfo, Output: os.Stderr})
 
 	logr.Trace("TestInfoLevel trace message")
 	logr.Debug("TestInfoLevel debug message")
@@ -188,7 +190,7 @@ func TestInfoLevel(_ /*t*/ *testing.T) {
 
 func TestTrace(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelTrace, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelTrace, Output: os.Stderr})
 
 	logr.Trace("Trace message")
 	logr.Trace("Trace message\nwith newline")
@@ -197,7 +199,7 @@ func TestTrace(_ /*t*/ *testing.T) {
 
 func TestTracef(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelTrace, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelTrace, Output: os.Stderr})
 
 	logr.Tracef("Trace message: %s", "formatted")
 	logr.Tracef("Trace message: %s\nwith newline", "formatted")
@@ -206,7 +208,7 @@ func TestTracef(_ /*t*/ *testing.T) {
 
 func TestTraceLevel(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelTrace, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelTrace, Output: os.Stderr})
 
 	logr.Trace("TestTraceLevel trace message")
 	logr.Debug("TestTraceLevel debug message")
@@ -219,7 +221,7 @@ func TestTraceLevel(_ /*t*/ *testing.T) {
 
 func TestVerbose(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelVerbose, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelVerbose, Output: os.Stderr})
 
 	logr.Verbose("Verbose message")
 	logr.Verbose("Verbose message\nwith newline")
@@ -228,7 +230,7 @@ func TestVerbose(_ /*t*/ *testing.T) {
 
 func TestVerbosef(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelVerbose, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelVerbose, Output: os.Stderr})
 
 	logr.Verbosef("Verbose message %s", "formatted")
 	logr.Verbosef("Verbose message %s\nwith newline", "formatted")
@@ -237,7 +239,7 @@ func TestVerbosef(_ /*t*/ *testing.T) {
 
 func TestVerboseLevel(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelVerbose, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelVerbose, Output: os.Stderr})
 
 	logr.Trace("TestVerboseLevel trace message")
 	logr.Debug("TestVerboseLevel debug message")
@@ -250,7 +252,7 @@ func TestVerboseLevel(_ /*t*/ *testing.T) {
 
 func TestWarn(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelWarn, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelWarn, Output: os.Stderr})
 
 	logr.Warn("Warning message")
 	logr.Warn("Warning message\nwith newline")
@@ -259,7 +261,7 @@ func TestWarn(_ /*t*/ *testing.T) {
 
 func TestWarnf(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelWarn, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelWarn, Output: os.Stderr})
 
 	logr.Warnf("Warning message: %s", "formatted")
 	logr.Warnf("Warning message: %s\nwith newline", "formatted")
@@ -268,7 +270,7 @@ func TestWarnf(_ /*t*/ *testing.T) {
 
 func TestWarnLevel(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelWarn, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelWarn, Output: os.Stderr})
 
 	logr.Trace("TestWarnLevel trace message")
 	logr.Debug("TestWarnLevel debug message")
@@ -303,7 +305,7 @@ func TestWarnLevel(_ /*t*/ *testing.T) {
 
 func TestJSON(t *testing.T) {
 
-	logr := NewWithOptions(Options{Level: LogLevelDebug, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, Output: os.Stderr})
 
 	jsonString := "{\"key\": \"value\", \"number\": 123, \"boolean\": true, \"array\": [1, 2, 3], \"object\": {\"nestedKey\": \"nestedValue\"}}"
 	var jsonData map[string]interface{}
