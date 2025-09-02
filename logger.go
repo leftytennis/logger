@@ -77,7 +77,7 @@ func (l LogLevel) String() string {
 	case LogLevelTrace:
 		return "Trace"
 	case LogLevelVerbose:
-		return "Verbose"
+		return "Info"       // LogLevelVerbose is treated as LogLevelInfo
 	case LogLevelWarn:
 		return "Warn"
 	default:
@@ -112,10 +112,6 @@ func buildMessage(l LogLevel, a ...any) string {
 	if len(message) == 0 {
 		message += prefix + "\n"
 	}
-
-	// if message[len(message)-1] != ' ' {
-	// 	message += " "
-	// }
 
 	return message
 }
