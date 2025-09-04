@@ -112,8 +112,9 @@ func TestDebug(_ /*t*/ *testing.T) {
 
 	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, Output: os.Stderr})
 
-	logr.Debug("Debug message")
-	logr.Debug("Debug message\nwith newline")
+	logr.Debug(1, "Debug message")
+	logr.Debug(1, "Debug message\nwith newline")
+	logr.Debug(1)
 
 }
 
@@ -128,7 +129,7 @@ func TestDebugf(_ /*t*/ *testing.T) {
 
 func TestDebugLevel(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, LevelCount: 1,Output: os.Stderr})
 
 	logr.Trace("TestDebugLevel trace message")
 	logr.Debug("TestDebugLevel debug message")
@@ -237,8 +238,10 @@ func TestVerbose(_ /*t*/ *testing.T) {
 
 	logr := NewWithOptions(ctx, Options{Level: LogLevelVerbose, Output: os.Stderr})
 
-	logr.Verbose("Verbose message")
-	logr.Verbose("Verbose message\nwith newline")
+	logr.Verbose(1, "Verbose message")
+	logr.Verbose(1, "Verbose message\nwith newline")
+	logr.Verbose(2, "Verbose message2")
+	logr.Verbose(2, "Verbose message2\nwith newline")
 
 }
 

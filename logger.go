@@ -40,24 +40,27 @@ const (
 )
 
 var (
-	ctx       context.Context
-	loggerKey = loggerKeyType{}
+	ctx                  context.Context
+	loggerKey            = loggerKeyType{}
+	logLevelCount        int
 )
 
 // var logFatal = Logger.Fatal
 
 // Logger is a custom log writer that adds a timestamp to each log entry
 type Logger struct {
-	Context context.Context
-	Level   LogLevel
-	Output  *os.File
-	m       *sync.Mutex
+	Context    context.Context
+	Level      LogLevel
+	LevelCount int
+	Output     *os.File
+	m          *sync.Mutex
 }
 
 // Options are options for the Logger
 type Options struct {
-	Level   LogLevel
-	Output  *os.File
+	Level      LogLevel
+	LevelCount int
+	Output     *os.File
 }
 
 func init() {
@@ -77,7 +80,7 @@ func (l LogLevel) String() string {
 	case LogLevelTrace:
 		return "Trace"
 	case LogLevelVerbose:
-		return "Info"       // LogLevelVerbose is treated as LogLevelInfo
+		return "Info" // LogLevelVerbose is treated as LogLevelInfo
 	case LogLevelWarn:
 		return "Warn"
 	default:
@@ -131,8 +134,9 @@ func FromContext(ctxParent context.Context) *Logger {
 // New creates a new Logger
 func New(ctx context.Context) *Logger {
 	return NewWithOptions(ctx, Options{
-		Level:   LogLevelInfo,
-		Output:  os.Stderr,
+		Level:  LogLevelInfo,
+		LevelCount: 1,
+		Output: os.Stderr,
 	})
 }
 
@@ -143,15 +147,20 @@ func NewWithOptions(ctxParent context.Context, opts Options) *Logger {
 		opts.Level = LogLevelInfo
 	}
 
+	if opts.LevelCount == 0 {
+		opts.LevelCount = 1
+	}
+
 	if opts.Output == nil {
 		opts.Output = os.Stderr
 	}
 
 	// Create new logger
 	log := &Logger{
-		Level:   opts.Level,
-		Output:  opts.Output,
-		m:       &sync.Mutex{},
+		Level:  opts.Level,
+		LevelCount: opts.LevelCount,
+		Output: opts.Output,
+		m:      &sync.Mutex{},
 	}
 
 	// create new context and store logger value
@@ -235,6 +244,24 @@ func (writer Logger) Debug(a ...any) {
 
 }
 
+// Debug2 logs a debug message when logLevelCount is >= 2 (-dd)
+func (writer Logger) Debug2(a ...any) {
+
+	if writer.Level >= LogLevelDebug && logLevelCount >= 2{
+		writer.Debug(a)
+	}
+
+}
+
+// Debug3 logs a debug message when logLevelCount is >= 3 (-ddd)
+func (writer Logger) Debug3(a ...any) {
+
+	if writer.Level >= LogLevelDebug && logLevelCount >= 3 {
+		writer.Debug(a...)
+	}
+
+}
+
 // Debugf logs a debug message with a format string
 func (writer Logger) Debugf(format string, a ...any) {
 
@@ -245,6 +272,24 @@ func (writer Logger) Debugf(format string, a ...any) {
 		if err != nil {
 			panic(err)
 		}
+	}
+
+}
+
+// Debugf2 logs a debug message with a format string when logLevelCount >= 2 (-dd)
+func (writer Logger) Debugf2(format string, a ...any) {
+
+	if writer.Level >= LogLevelDebug && logLevelCount >= 2 {
+		writer.Debugf(format, a...)
+	}
+
+}
+
+// Debugf3 logs a debug message with a format string when logLevelCount >= 3 (-ddd)
+func (writer Logger) Debugf3(format string, a ...any) {
+
+	if writer.Level >= LogLevelDebug && logLevelCount >= 3 {
+		writer.Debugf(format, a...)
 	}
 
 }
@@ -370,6 +415,24 @@ func (writer Logger) Verbose(a ...any) {
 
 }
 
+// Verbose2 logs a verbose message when logLevelCount >= 2 (i.e., -vv)
+func (writer Logger) Verbose2(a ...any) {
+
+	if writer.Level >= LogLevelVerbose && logLevelCount >= 2 {
+		writer.Verbose(a...)
+	}
+
+}
+
+// Verbose3 logs a verbose message when logLevelCount >= 3 (i.e., -vvv)
+func (writer Logger) Verbose3(a ...any) {
+
+	if writer.Level >= LogLevelVerbose && logLevelCount >= 3 {
+		writer.Verbose(a...)
+	}
+
+}
+
 // Verbosef logs a verbose message with a format string
 func (writer Logger) Verbosef(format string, a ...any) {
 
@@ -380,6 +443,24 @@ func (writer Logger) Verbosef(format string, a ...any) {
 		if err != nil {
 			panic(err)
 		}
+	}
+
+}
+
+// Verbosef2 logs a verbose message with a format string when logLevelCount >= 2 (i.e., -vv)
+func (writer Logger) Verbosef2(format string, a ...any) {
+
+	if writer.Level >= LogLevelVerbose && logLevelCount >= 2 {
+		writer.Verbosef(format, a...)
+	}
+
+}
+
+// Verbosef3 logs a verbose message with a format string when logLevelCount >= 3 (i.e., -vvv)
+func (writer Logger) Verbosef3(format string, a ...any) {
+
+	if writer.Level >= LogLevelVerbose && logLevelCount >= 3 {
+		writer.Verbosef(format, a...)
 	}
 
 }
