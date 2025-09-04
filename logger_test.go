@@ -3,7 +3,6 @@ package logger
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"testing"
 )
@@ -13,14 +12,18 @@ func TestMain(m *testing.M) {
 	// ...
 
 	// Initialize logger
-	logr := New(ctx)
+	logr := NewWithOptions(ctx, Options{
+		Level:  LogLevelInfo,
+		LevelCount: 3,
+		Output: os.Stderr,
+	})
 	
 	ctx = WithContext(context.TODO(), logr)
 
 	value := FromContext(ctx)
-	fmt.Printf("%v", value)
 
 	logr.SetLevel(LogLevelDebug)
+	logr.Verbosef2("Logger initialized in TestMain: %v", value)
 
 	// Run tests
 	exitCode := m.Run()
@@ -112,9 +115,9 @@ func TestDebug(_ /*t*/ *testing.T) {
 
 	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, Output: os.Stderr})
 
-	logr.Debug(1, "Debug message")
-	logr.Debug(1, "Debug message\nwith newline")
-	logr.Debug(1)
+	logr.Debug("Debug message")
+	logr.Debug("Debug message\nwith newline")
+	logr.Debug("Debug message\nwith newline\nwith more newlines")
 
 }
 
@@ -238,10 +241,10 @@ func TestVerbose(_ /*t*/ *testing.T) {
 
 	logr := NewWithOptions(ctx, Options{Level: LogLevelVerbose, Output: os.Stderr})
 
-	logr.Verbose(1, "Verbose message")
-	logr.Verbose(1, "Verbose message\nwith newline")
-	logr.Verbose(2, "Verbose message2")
-	logr.Verbose(2, "Verbose message2\nwith newline")
+	logr.Verbose("Verbose message")
+	logr.Verbose("Verbose message\nwith newline")
+	logr.Verbose("Verbose message2")
+	logr.Verbose("Verbose message2\nwith newline")
 
 }
 

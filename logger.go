@@ -155,6 +155,8 @@ func NewWithOptions(ctxParent context.Context, opts Options) *Logger {
 		opts.Output = os.Stderr
 	}
 
+	logLevelCount = opts.LevelCount
+	
 	// Create new logger
 	log := &Logger{
 		Level:  opts.Level,
