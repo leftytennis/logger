@@ -14,7 +14,7 @@ func TestMain(m *testing.M) {
 	// Initialize logger
 	logr := NewWithOptions(ctx, Options{
 		Level:  LogLevelInfo,
-		LevelCount: 3,
+		LevelCount: 2,
 		Output: os.Stderr,
 	})
 	
@@ -22,8 +22,10 @@ func TestMain(m *testing.M) {
 
 	value := FromContext(ctx)
 
-	logr.SetLevel(LogLevelDebug)
+	// logr.SetLevel(LogLevelDebug)
 	logr.Verbosef2("Logger initialized in TestMain: %v", value)
+	logr.Verbose3("Verbose3 logLevelCount=", logLevelCount)
+	logr.Verbosef3("Verbose3 logLevelCount=%d", logLevelCount)
 
 	// Run tests
 	exitCode := m.Run()
