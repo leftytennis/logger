@@ -191,10 +191,11 @@ func WithContext(ctxParent context.Context, log *Logger) context.Context {
 }
 
 // SetLevel sets the log level
-func (writer *Logger) SetLevel(level LogLevel) {
+func (writer *Logger) SetLevel(level LogLevel, levelCount int) {
 
 	writer.m.Lock()
 	writer.Level = level
+	writer.LevelCount = levelCount
 	writer.m.Unlock()
 	writer.Infof("log level set to %s\n", level.String())
 

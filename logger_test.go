@@ -86,7 +86,7 @@ func TestNewWithOptions(t *testing.T) {
 func TestSetLevel(t *testing.T) {
 
 	logr := New(context.Background())
-	logr.SetLevel(LogLevelError)
+	logr.SetLevel(LogLevelError, 1)
 
 	if logr.Level != LogLevelError {
 		t.Errorf("Expected log level to be LogLevelError, got %v", logr.Level)
@@ -261,11 +261,44 @@ func TestVerbosef(_ /*t*/ *testing.T) {
 
 func TestVerboseLevel(_ /*t*/ *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelVerbose, Output: os.Stderr})
+	logr := NewWithOptions(ctx, Options{Level: LogLevelVerbose, LevelCount: 1, Output: os.Stderr})
 
 	logr.Trace("TestVerboseLevel trace message")
 	logr.Debug("TestVerboseLevel debug message")
 	logr.Verbose("TestVerboseLevel verbose message")
+	logr.Verbose2("TestVerboseLevel verbose message2")
+	logr.Verbose3("TestVerboseLevel verbose message3")
+	logr.Verbosef("TestVerboseLevel verbose message\n")
+	logr.Verbosef2("TestVerboseLevel verbose message2\n")
+	logr.Verbosef3("TestVerboseLevel verbose message3\n")
+	logr.Info("TestVerboseLevel info message")
+	logr.Warn("TestVerboseLevel warn message")
+	logr.Error("TestVerboseLevel error message")
+
+	logr = NewWithOptions(ctx, Options{Level: LogLevelVerbose, LevelCount: 2, Output: os.Stderr})
+
+	logr.Trace("TestVerboseLevel trace message")
+	logr.Debug("TestVerboseLevel debug message")
+	logr.Verbose("TestVerboseLevel verbose message")
+	logr.Verbose2("TestVerboseLevel verbose message2")
+	logr.Verbose3("TestVerboseLevel verbose message3")
+	logr.Verbosef("TestVerboseLevel verbose message\n")
+	logr.Verbosef2("TestVerboseLevel verbose message2\n")
+	logr.Verbosef3("TestVerboseLevel verbose message3\n")
+	logr.Info("TestVerboseLevel info message")
+	logr.Warn("TestVerboseLevel warn message")
+	logr.Error("TestVerboseLevel error message")
+
+	logr = NewWithOptions(ctx, Options{Level: LogLevelVerbose, LevelCount: 3, Output: os.Stderr})
+
+	logr.Trace("TestVerboseLevel trace message")
+	logr.Debug("TestVerboseLevel debug message")
+	logr.Verbose("TestVerboseLevel verbose message")
+	logr.Verbose2("TestVerboseLevel verbose message2")
+	logr.Verbose3("TestVerboseLevel verbose message3")
+	logr.Verbosef("TestVerboseLevel verbose message\n")
+	logr.Verbosef2("TestVerboseLevel verbose message2\n")
+	logr.Verbosef3("TestVerboseLevel verbose message3\n")
 	logr.Info("TestVerboseLevel info message")
 	logr.Warn("TestVerboseLevel warn message")
 	logr.Error("TestVerboseLevel error message")
