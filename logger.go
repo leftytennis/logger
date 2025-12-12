@@ -132,6 +132,49 @@ func FromContext(ctxParent context.Context) *Logger {
 	return nil
 }
 
+// GetLoggerValuesFromString returns the LogLevel and level count from a string (.i.e. "debug", "debug1"...)
+func GetLoggerValuesFromString(levelStr string) (LogLevel, int) {
+
+	var logLevel LogLevel
+	var levelCount int = 1
+
+	levelCount = 1
+	logLevelEnv := strings.ToLower(os.Getenv("SWARMTROOPER_LOG_LEVEL"))
+
+	switch logLevelEnv {
+	case "info":
+		logLevel = LogLevelInfo
+	case "verbose", "verbose1":
+		logLevel = LogLevelVerbose
+		levelCount = 1
+	case "verbose2":
+		logLevel = LogLevelVerbose
+		levelCount = 2
+	case "verbose3":
+		logLevel = LogLevelVerbose
+		levelCount = 3
+	case "debug", "debug1":
+		logLevel = LogLevelDebug
+		levelCount = 1
+	case "debug2":
+		logLevel = LogLevelDebug
+		levelCount = 2
+	case "debug3":
+		logLevel = LogLevelDebug
+		levelCount = 3
+	case "warn", "warning":
+		logLevel = LogLevelWarn
+	case "error":
+		logLevel = LogLevelError
+	case "fatal":
+		logLevel = LogLevelFatal
+	default:
+		logLevel = LogLevelInfo
+	}
+
+	return logLevel, levelCount
+}
+
 // New creates a new Logger
 func New(ctx context.Context) *Logger {
 	return NewWithOptions(ctx, Options{
