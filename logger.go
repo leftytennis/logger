@@ -19,19 +19,19 @@ type loggerKeyType struct{}
 
 const (
 	// LogLevelFatal is the highest log level and will log fatal messages
-	LogLevelFatal = -16
+	LogLevelFatal LogLevel = -16
 	// LogLevelError is the log level for error messages
-	LogLevelError = -8
+	LogLevelError LogLevel = -8
 	// LogLevelWarn is the log level for warning messages
-	LogLevelWarn = -4
+	LogLevelWarn LogLevel = -4
 	// LogLevelInfo is the log level for info messages
-	LogLevelInfo = 0
+	LogLevelInfo LogLevel = 0
 	// LogLevelVerbose is the log level for verbose messages
-	LogLevelVerbose = 4
+	LogLevelVerbose LogLevel = 4
 	// LogLevelDebug is the log level for debug messages
-	LogLevelDebug = 8
+	LogLevelDebug LogLevel = 8
 	// LogLevelTrace is the log level for trace messages
-	LogLevelTrace = 16
+	LogLevelTrace LogLevel = 16
 )
 
 const (
@@ -48,7 +48,8 @@ type Logger struct {
 	Level      LogLevel
 	LevelCount int
 	Output     io.Writer
-	m          sync.Mutex
+	exitFunc   func(int)
+	m          sync.RWMutex
 }
 
 // Options are options for the Logger
@@ -56,7 +57,6 @@ type Options struct {
 	Level      LogLevel
 	LevelCount int
 	Output     io.Writer
-	LevelSet   bool // explicitly indicate that Level was set
 }
 
 func (l LogLevel) String() string {
@@ -81,34 +81,38 @@ func (l LogLevel) String() string {
 }
 
 // buildMessage builds a log message with a prefix and args passed to it
-// The arguments are separated by a space
+// Multiple args are space-separated (like fmt.Println). Newlines in the
+// resulting string get continuation-line padding.
 func buildMessage(l LogLevel, a ...any) string {
 
-	var message string
-
 	prefix := time.Now().Format(LogDateFormat) + " " + l.String()[0:1] + " "
-	prefixLength := len(prefix)
+	padding := strings.Repeat(" ", len(prefix))
 
-	for _, v := range a {
-		lines := strings.Split(fmt.Sprint(v), "\n")
-		for ix, line := range lines {
-			if line != "" {
-				if ix == 0 {
-					message += prefix + line + "\n"
-				} else {
-					message += strings.Repeat(" ", prefixLength) + line + "\n"
-				}
+	combined := fmt.Sprint(a...)
+	if combined == "" {
+		return prefix + "\n"
+	}
+
+	lines := strings.Split(combined, "\n")
+
+	var b strings.Builder
+	for i, line := range lines {
+		if line != "" {
+			if i == 0 {
+				b.WriteString(prefix)
+			} else {
+				b.WriteString(padding)
 			}
+			b.WriteString(line)
+			b.WriteByte('\n')
 		}
 	}
 
-	message = strings.TrimRight(message, " ")
-
-	if len(message) == 0 {
-		message += prefix + "\n"
+	result := b.String()
+	if result == "" {
+		return prefix + "\n"
 	}
-
-	return message
+	return result
 }
 
 // FromContext returns a pointer to the logger from a context
@@ -150,6 +154,15 @@ func GetLoggerValuesFromString(levelStr string) (LogLevel, int) {
 	case "debug3":
 		logLevel = LogLevelDebug
 		levelCount = 3
+	case "trace", "trace1":
+		logLevel = LogLevelTrace
+		levelCount = 1
+	case "trace2":
+		logLevel = LogLevelTrace
+		levelCount = 2
+	case "trace3":
+		logLevel = LogLevelTrace
+		levelCount = 3
 	case "warn", "warning":
 		logLevel = LogLevelWarn
 	case "error":
@@ -167,7 +180,6 @@ func GetLoggerValuesFromString(levelStr string) (LogLevel, int) {
 func New(ctx context.Context) *Logger {
 	return NewWithOptions(ctx, Options{
 		Level:      LogLevelInfo,
-		LevelSet:   true,
 		LevelCount: 1,
 		Output:     os.Stderr,
 	})
@@ -175,10 +187,6 @@ func New(ctx context.Context) *Logger {
 
 // NewWithOptions creates a new Logger with options
 func NewWithOptions(ctxParent context.Context, opts Options) *Logger {
-
-	if !opts.LevelSet && opts.Level == 0 {
-		opts.Level = LogLevelInfo
-	}
 
 	if opts.LevelCount == 0 {
 		opts.LevelCount = 1
@@ -193,10 +201,8 @@ func NewWithOptions(ctxParent context.Context, opts Options) *Logger {
 		Level:      opts.Level,
 		LevelCount: opts.LevelCount,
 		Output:     opts.Output,
+		exitFunc:   os.Exit,
 	}
-
-	// create new context and store logger value
-	WithContext(ctxParent, log)
 
 	return log
 }
@@ -260,9 +266,25 @@ func (l *Logger) Write(bytes []byte) (int, error) {
 	return l.Output.Write(bytes)
 }
 
+// levelAllowed checks if the given level should be logged
+func (l *Logger) levelAllowed(level LogLevel) bool {
+	l.m.RLock()
+	allowed := l.Level >= level
+	l.m.RUnlock()
+	return allowed
+}
+
+// subLevelAllowed checks if a sub-level (LevelCount) log should be logged
+func (l *Logger) subLevelAllowed(level LogLevel, requiredCount int) bool {
+	l.m.RLock()
+	allowed := l.Level > level || (l.Level == level && l.LevelCount >= requiredCount)
+	l.m.RUnlock()
+	return allowed
+}
+
 // log is the internal method that handles level checking, message building, and writing
 func (l *Logger) log(level LogLevel, a ...any) {
-	if l.Level >= level {
+	if l.levelAllowed(level) {
 		message := buildMessage(level, a...)
 		l.Write([]byte(message))
 	}
@@ -270,7 +292,7 @@ func (l *Logger) log(level LogLevel, a ...any) {
 
 // logf is the internal method for formatted log messages
 func (l *Logger) logf(level LogLevel, format string, a ...any) {
-	if l.Level >= level {
+	if l.levelAllowed(level) {
 		msg := fmt.Sprintf(format, a...)
 		message := buildMessage(level, msg)
 		l.Write([]byte(message))
@@ -284,15 +306,17 @@ func (l *Logger) Debug(a ...any) {
 
 // Debug2 logs a debug message when LevelCount is >= 2 (-dd)
 func (l *Logger) Debug2(a ...any) {
-	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && l.LevelCount >= 2) {
-		l.Debug(a...)
+	if l.subLevelAllowed(LogLevelDebug, 2) {
+		message := buildMessage(LogLevelDebug, a...)
+		l.Write([]byte(message))
 	}
 }
 
 // Debug3 logs a debug message when LevelCount is >= 3 (-ddd)
 func (l *Logger) Debug3(a ...any) {
-	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && l.LevelCount >= 3) {
-		l.Debug(a...)
+	if l.subLevelAllowed(LogLevelDebug, 3) {
+		message := buildMessage(LogLevelDebug, a...)
+		l.Write([]byte(message))
 	}
 }
 
@@ -303,15 +327,19 @@ func (l *Logger) Debugf(format string, a ...any) {
 
 // Debugf2 logs a debug message with a format string when LevelCount >= 2 (-dd)
 func (l *Logger) Debugf2(format string, a ...any) {
-	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && l.LevelCount >= 2) {
-		l.Debugf(format, a...)
+	if l.subLevelAllowed(LogLevelDebug, 2) {
+		msg := fmt.Sprintf(format, a...)
+		message := buildMessage(LogLevelDebug, msg)
+		l.Write([]byte(message))
 	}
 }
 
 // Debugf3 logs a debug message with a format string when LevelCount >= 3 (-ddd)
 func (l *Logger) Debugf3(format string, a ...any) {
-	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && l.LevelCount >= 3) {
-		l.Debugf(format, a...)
+	if l.subLevelAllowed(LogLevelDebug, 3) {
+		msg := fmt.Sprintf(format, a...)
+		message := buildMessage(LogLevelDebug, msg)
+		l.Write([]byte(message))
 	}
 }
 
@@ -329,7 +357,7 @@ func (l *Logger) Errorf(format string, a ...any) {
 func (l *Logger) Fatal(a ...any) {
 	message := buildMessage(LogLevelFatal, a...)
 	l.Write([]byte(message))
-	os.Exit(1)
+	l.exitFunc(1)
 }
 
 // Fatalf logs a fatal message with a format string
@@ -337,7 +365,7 @@ func (l *Logger) Fatalf(format string, a ...any) {
 	msg := fmt.Sprintf(format, a...)
 	message := buildMessage(LogLevelFatal, msg)
 	l.Write([]byte(message))
-	os.Exit(1)
+	l.exitFunc(1)
 }
 
 // Info logs an info message
@@ -367,15 +395,17 @@ func (l *Logger) Verbose(a ...any) {
 
 // Verbose2 logs a verbose message when LevelCount >= 2 (i.e., -vv)
 func (l *Logger) Verbose2(a ...any) {
-	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && l.LevelCount >= 2) {
-		l.Verbose(a...)
+	if l.subLevelAllowed(LogLevelVerbose, 2) {
+		message := buildMessage(LogLevelVerbose, a...)
+		l.Write([]byte(message))
 	}
 }
 
 // Verbose3 logs a verbose message when LevelCount >= 3 (i.e., -vvv)
 func (l *Logger) Verbose3(a ...any) {
-	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && l.LevelCount >= 3) {
-		l.Verbose(a...)
+	if l.subLevelAllowed(LogLevelVerbose, 3) {
+		message := buildMessage(LogLevelVerbose, a...)
+		l.Write([]byte(message))
 	}
 }
 
@@ -386,15 +416,19 @@ func (l *Logger) Verbosef(format string, a ...any) {
 
 // Verbosef2 logs a verbose message with a format string when LevelCount >= 2 (i.e., -vv)
 func (l *Logger) Verbosef2(format string, a ...any) {
-	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && l.LevelCount >= 2) {
-		l.Verbosef(format, a...)
+	if l.subLevelAllowed(LogLevelVerbose, 2) {
+		msg := fmt.Sprintf(format, a...)
+		message := buildMessage(LogLevelVerbose, msg)
+		l.Write([]byte(message))
 	}
 }
 
 // Verbosef3 logs a verbose message with a format string when LevelCount >= 3 (i.e., -vvv)
 func (l *Logger) Verbosef3(format string, a ...any) {
-	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && l.LevelCount >= 3) {
-		l.Verbosef(format, a...)
+	if l.subLevelAllowed(LogLevelVerbose, 3) {
+		msg := fmt.Sprintf(format, a...)
+		message := buildMessage(LogLevelVerbose, msg)
+		l.Write([]byte(message))
 	}
 }
 

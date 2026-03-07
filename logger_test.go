@@ -41,9 +41,8 @@ func TestNewWithOptions(t *testing.T) {
 
 	ctx := context.TODO()
 	opts := Options{
-		Level:    LogLevelDebug,
-		LevelSet: true,
-		Output:   os.Stdout,
+		Level:  LogLevelDebug,
+		Output: os.Stdout,
 	}
 
 	logr := NewWithOptions(ctx, opts)
@@ -87,7 +86,7 @@ func TestSetOutput(t *testing.T) {
 func TestDebug(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, Output: &buf})
 
 	logr.Debug("Debug message")
 	output := buf.String()
@@ -107,7 +106,7 @@ func TestDebug(t *testing.T) {
 func TestDebugf(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, Output: &buf})
 
 	logr.Debugf("Debug message %s", "formatted")
 	output := buf.String()
@@ -120,7 +119,7 @@ func TestDebugf(t *testing.T) {
 func TestDebugLevel(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, LevelCount: 1, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelCount: 1, Output: &buf})
 
 	logr.Trace("trace message")
 	if buf.Len() != 0 {
@@ -155,7 +154,7 @@ func TestDebugLevel(t *testing.T) {
 func TestError(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelError, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelError, Output: &buf})
 
 	logr.Error("Error message")
 	output := buf.String()
@@ -168,7 +167,7 @@ func TestError(t *testing.T) {
 func TestErrorf(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelError, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelError, Output: &buf})
 
 	logr.Errorf("Error message: %s", "formatted")
 	output := buf.String()
@@ -181,7 +180,7 @@ func TestErrorf(t *testing.T) {
 func TestErrorLevel(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelError, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelError, Output: &buf})
 
 	logr.Trace("trace message")
 	logr.Debug("debug message")
@@ -259,7 +258,7 @@ func TestInfoLevel(t *testing.T) {
 func TestTrace(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelTrace, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelTrace, Output: &buf})
 
 	logr.Trace("Trace message")
 	output := buf.String()
@@ -272,7 +271,7 @@ func TestTrace(t *testing.T) {
 func TestTracef(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelTrace, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelTrace, Output: &buf})
 
 	logr.Tracef("Trace message: %s", "formatted")
 	output := buf.String()
@@ -285,7 +284,7 @@ func TestTracef(t *testing.T) {
 func TestTraceLevel(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelTrace, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelTrace, Output: &buf})
 
 	logr.Trace("trace message")
 	if buf.Len() == 0 {
@@ -309,7 +308,7 @@ func TestTraceLevel(t *testing.T) {
 func TestVerbose(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, Output: &buf})
 
 	logr.Verbose("Verbose message")
 	output := buf.String()
@@ -322,7 +321,7 @@ func TestVerbose(t *testing.T) {
 func TestVerbosef(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, Output: &buf})
 
 	logr.Verbosef("Verbose message %s", "formatted")
 	output := buf.String()
@@ -336,7 +335,7 @@ func TestVerboseLevel(t *testing.T) {
 
 	// LevelCount 1: Verbose should log, Verbose2/3 should not
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelSet: true, LevelCount: 1, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelCount: 1, Output: &buf})
 
 	logr.Trace("trace message")
 	logr.Debug("debug message")
@@ -362,7 +361,7 @@ func TestVerboseLevel(t *testing.T) {
 
 	// LevelCount 2: Verbose and Verbose2 should log, Verbose3 should not
 	buf.Reset()
-	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelSet: true, LevelCount: 2, Output: &buf})
+	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelCount: 2, Output: &buf})
 
 	logr.Verbose("verbose message")
 	if buf.Len() == 0 {
@@ -383,7 +382,7 @@ func TestVerboseLevel(t *testing.T) {
 
 	// LevelCount 3: all Verbose levels should log
 	buf.Reset()
-	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelSet: true, LevelCount: 3, Output: &buf})
+	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelCount: 3, Output: &buf})
 
 	logr.Verbose3("verbose3 message")
 	if buf.Len() == 0 {
@@ -396,7 +395,7 @@ func TestDebugLevelCount(t *testing.T) {
 
 	// LevelCount 1: Debug should log, Debug2/3 should not
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, LevelCount: 1, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelCount: 1, Output: &buf})
 
 	logr.Debug("debug message")
 	if buf.Len() == 0 {
@@ -416,7 +415,7 @@ func TestDebugLevelCount(t *testing.T) {
 
 	// LevelCount 2: Debug and Debug2 should log
 	buf.Reset()
-	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, LevelCount: 2, Output: &buf})
+	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelCount: 2, Output: &buf})
 
 	logr.Debug2("debug2 message")
 	if buf.Len() == 0 {
@@ -431,7 +430,7 @@ func TestDebugLevelCount(t *testing.T) {
 
 	// LevelCount 3: all Debug levels should log
 	buf.Reset()
-	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, LevelCount: 3, Output: &buf})
+	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelCount: 3, Output: &buf})
 
 	logr.Debug3("debug3 message")
 	if buf.Len() == 0 {
@@ -443,7 +442,7 @@ func TestDebugLevelCount(t *testing.T) {
 func TestWarn(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelWarn, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelWarn, Output: &buf})
 
 	logr.Warn("Warning message")
 	output := buf.String()
@@ -456,7 +455,7 @@ func TestWarn(t *testing.T) {
 func TestWarnf(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelWarn, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelWarn, Output: &buf})
 
 	logr.Warnf("Warning message: %s", "formatted")
 	output := buf.String()
@@ -469,7 +468,7 @@ func TestWarnf(t *testing.T) {
 func TestWarnLevel(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelWarn, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelWarn, Output: &buf})
 
 	logr.Trace("trace message")
 	logr.Debug("debug message")
@@ -495,7 +494,7 @@ func TestWarnLevel(t *testing.T) {
 func TestJSON(t *testing.T) {
 
 	var buf bytes.Buffer
-	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, Output: &buf})
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, Output: &buf})
 
 	jsonString := `{"key": "value", "number": 123}`
 	var jsonData map[string]interface{}
@@ -520,9 +519,9 @@ func TestJSON(t *testing.T) {
 func TestGetLoggerValuesFromString(t *testing.T) {
 
 	tests := []struct {
-		input      string
-		wantLevel  LogLevel
-		wantCount  int
+		input     string
+		wantLevel LogLevel
+		wantCount int
 	}{
 		{"info", LogLevelInfo, 1},
 		{"verbose", LogLevelVerbose, 1},
@@ -531,12 +530,17 @@ func TestGetLoggerValuesFromString(t *testing.T) {
 		{"debug", LogLevelDebug, 1},
 		{"debug2", LogLevelDebug, 2},
 		{"debug3", LogLevelDebug, 3},
+		{"trace", LogLevelTrace, 1},
+		{"trace1", LogLevelTrace, 1},
+		{"trace2", LogLevelTrace, 2},
+		{"trace3", LogLevelTrace, 3},
 		{"warn", LogLevelWarn, 1},
 		{"warning", LogLevelWarn, 1},
 		{"error", LogLevelError, 1},
 		{"fatal", LogLevelFatal, 1},
 		{"unknown", LogLevelInfo, 1},
 		{"DEBUG", LogLevelDebug, 1},
+		{"TRACE", LogLevelTrace, 1},
 	}
 
 	for _, tt := range tests {
@@ -561,6 +565,15 @@ func TestBuildMessageNonStringArgs(t *testing.T) {
 
 }
 
+func TestBuildMessageMultipleArgs(t *testing.T) {
+
+	message := buildMessage(LogLevelInfo, "hello", "world")
+	if !strings.Contains(message, "helloworld") {
+		t.Errorf("Expected message to contain space-separated args via fmt.Sprint, got %q", message)
+	}
+
+}
+
 func TestFromContextNil(t *testing.T) {
 
 	ctx := context.TODO()
@@ -581,6 +594,44 @@ func TestWithContextSameLogger(t *testing.T) {
 	ctx2 := WithContext(ctx, logr)
 	if ctx2 != ctx {
 		t.Error("Expected same context when logger already exists")
+	}
+
+}
+
+func TestFatal(t *testing.T) {
+
+	var buf bytes.Buffer
+	var exitCode int
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelInfo, Output: &buf})
+	logr.exitFunc = func(code int) { exitCode = code }
+
+	logr.Fatal("fatal error")
+
+	output := buf.String()
+	if !strings.Contains(output, "F fatal error") {
+		t.Errorf("Expected fatal message in output, got %q", output)
+	}
+	if exitCode != 1 {
+		t.Errorf("Expected exit code 1, got %d", exitCode)
+	}
+
+}
+
+func TestFatalf(t *testing.T) {
+
+	var buf bytes.Buffer
+	var exitCode int
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelInfo, Output: &buf})
+	logr.exitFunc = func(code int) { exitCode = code }
+
+	logr.Fatalf("fatal error: %s", "details")
+
+	output := buf.String()
+	if !strings.Contains(output, "F fatal error: details") {
+		t.Errorf("Expected fatal message in output, got %q", output)
+	}
+	if exitCode != 1 {
+		t.Errorf("Expected exit code 1, got %d", exitCode)
 	}
 
 }
