@@ -1,40 +1,13 @@
 package logger
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 )
-
-func TestMain(m *testing.M) {
-	// Setup code if needed
-	// ...
-
-	// Initialize logger
-	logr := NewWithOptions(ctx, Options{
-		Level:  LogLevelInfo,
-		LevelCount: 2,
-		Output: os.Stderr,
-	})
-	
-	ctx = WithContext(context.TODO(), logr)
-
-	value := FromContext(ctx)
-
-	// logr.SetLevel(LogLevelDebug)
-	logr.Verbosef2("Logger initialized in TestMain: %v", value)
-	logr.Verbose3("Verbose3 logLevelCount=", logLevelCount)
-	logr.Verbosef3("Verbose3 logLevelCount=%d", logLevelCount)
-
-	// Run tests
-	exitCode := m.Run()
-
-	// Teardown code if needed
-	// ...
-
-	os.Exit(exitCode)
-}
 
 func TestNewLogger(t *testing.T) {
 
@@ -48,7 +21,7 @@ func TestNewLogger(t *testing.T) {
 	}
 
 	ctx = WithContext(ctx, logr)
-	
+
 	logrValue := FromContext(ctx)
 	if logrValue == nil {
 		t.Fatal("Expected a valid Logger instance from context, got nil")
@@ -66,9 +39,11 @@ func TestNewLogger(t *testing.T) {
 
 func TestNewWithOptions(t *testing.T) {
 
+	ctx := context.TODO()
 	opts := Options{
-		Level:  LogLevelDebug,
-		Output: os.Stdout,
+		Level:    LogLevelDebug,
+		LevelSet: true,
+		Output:   os.Stdout,
 	}
 
 	logr := NewWithOptions(ctx, opts)
@@ -97,272 +72,432 @@ func TestSetLevel(t *testing.T) {
 func TestSetOutput(t *testing.T) {
 
 	logr := New(context.Background())
-	tempFile, err := os.CreateTemp("", "testlog")
+	var buf bytes.Buffer
 
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
+	logr.SetOutput(&buf)
 
-	defer os.Remove(tempFile.Name())
+	logr.Info("test output")
 
-	logr.SetOutput(tempFile)
-
-	if logr.Output != tempFile {
-		t.Errorf("Expected output to be temp file, got %v", logr.Output)
+	if buf.Len() == 0 {
+		t.Error("Expected output to be written to buffer")
 	}
 
 }
 
-func TestDebug(_ /*t*/ *testing.T) {
+func TestDebug(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, Output: &buf})
 
 	logr.Debug("Debug message")
+	output := buf.String()
+	if !strings.Contains(output, "D Debug message") {
+		t.Errorf("Expected debug message in output, got %q", output)
+	}
+
+	buf.Reset()
 	logr.Debug("Debug message\nwith newline")
-	logr.Debug("Debug message\nwith newline\nwith more newlines")
+	output = buf.String()
+	if !strings.Contains(output, "D Debug message") || !strings.Contains(output, "with newline") {
+		t.Errorf("Expected multiline debug message in output, got %q", output)
+	}
 
 }
 
-func TestDebugf(_ /*t*/ *testing.T) {
+func TestDebugf(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, Output: &buf})
 
 	logr.Debugf("Debug message %s", "formatted")
-	logr.Debugf("Debug message %s\nwith newline", "formatted")
+	output := buf.String()
+	if !strings.Contains(output, "D Debug message formatted") {
+		t.Errorf("Expected formatted debug message in output, got %q", output)
+	}
 
 }
 
-func TestDebugLevel(_ /*t*/ *testing.T) {
+func TestDebugLevel(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, LevelCount: 1,Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, LevelCount: 1, Output: &buf})
 
-	logr.Trace("TestDebugLevel trace message")
-	logr.Debug("TestDebugLevel debug message")
-	logr.Verbose("TestDebugLevel verbose message")
-	logr.Info("TestDebugLevel info message")
-	logr.Warn("TestDebugLevel warn message")
-	logr.Error("TestDebugLevel error message")
+	logr.Trace("trace message")
+	if buf.Len() != 0 {
+		t.Error("Trace should not be logged at Debug level")
+	}
+
+	logr.Debug("debug message")
+	if buf.Len() == 0 {
+		t.Error("Debug should be logged at Debug level")
+	}
+
+	buf.Reset()
+	logr.Info("info message")
+	if buf.Len() == 0 {
+		t.Error("Info should be logged at Debug level")
+	}
+
+	buf.Reset()
+	logr.Warn("warn message")
+	if buf.Len() == 0 {
+		t.Error("Warn should be logged at Debug level")
+	}
+
+	buf.Reset()
+	logr.Error("error message")
+	if buf.Len() == 0 {
+		t.Error("Error should be logged at Debug level")
+	}
 
 }
 
-func TestError(_ /*t*/ *testing.T) {
+func TestError(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelError, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelError, LevelSet: true, Output: &buf})
 
 	logr.Error("Error message")
-	logr.Error("Error message\nwith newline")
+	output := buf.String()
+	if !strings.Contains(output, "E Error message") {
+		t.Errorf("Expected error message in output, got %q", output)
+	}
 
 }
 
-func TestErrorf(_ /*t*/ *testing.T) {
+func TestErrorf(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelError, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelError, LevelSet: true, Output: &buf})
 
 	logr.Errorf("Error message: %s", "formatted")
-	logr.Errorf("Error message: %s\nwith newline", "formatted")
+	output := buf.String()
+	if !strings.Contains(output, "E Error message: formatted") {
+		t.Errorf("Expected formatted error message in output, got %q", output)
+	}
 
 }
 
-func TestErrorLevel(_ /*t*/ *testing.T) {
+func TestErrorLevel(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelError, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelError, LevelSet: true, Output: &buf})
 
-	logr.Trace("TestErrorLevel trace message")
-	logr.Debug("TestErrorLevel debug message")
-	logr.Verbose("TestErrorLevel verbose message")
-	logr.Info("TestErrorLevel info message")
-	logr.Warn("TestErrorLevel warn message")
-	logr.Error("TestErrorLevel error message")
+	logr.Trace("trace message")
+	logr.Debug("debug message")
+	logr.Verbose("verbose message")
+	logr.Info("info message")
+	logr.Warn("warn message")
+	if buf.Len() != 0 {
+		t.Error("Nothing below Error should be logged at Error level")
+	}
+
+	logr.Error("error message")
+	if buf.Len() == 0 {
+		t.Error("Error should be logged at Error level")
+	}
 
 }
 
-func TestInfo(_ /*t*/ *testing.T) {
+func TestInfo(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelInfo, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelInfo, Output: &buf})
 
 	logr.Info("Info message")
-	logr.Info("Info message\nwith newline")
-	logr.Info("Info message\nwith newline\nwith more newlines")
+	output := buf.String()
+	if !strings.Contains(output, "I Info message") {
+		t.Errorf("Expected info message in output, got %q", output)
+	}
 
 }
 
-func TestInfof(_ /*t*/ *testing.T) {
+func TestInfof(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelInfo, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelInfo, Output: &buf})
 
 	logr.Infof("Info message: %s", "formatted")
-	logr.Infof("Info message: %s\nwith newline", "formatted")
+	output := buf.String()
+	if !strings.Contains(output, "I Info message: formatted") {
+		t.Errorf("Expected formatted info message in output, got %q", output)
+	}
 
 }
 
-func TestInfoLevel(_ /*t*/ *testing.T) {
+func TestInfoLevel(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelInfo, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelInfo, Output: &buf})
 
-	logr.Trace("TestInfoLevel trace message")
-	logr.Debug("TestInfoLevel debug message")
-	logr.Verbose("TestInfoLevel verbose message")
-	logr.Info("TestInfoLevel info message")
-	logr.Warn("TestInfoLevel warn message")
-	logr.Error("TestInfoLevel error message")
+	logr.Trace("trace message")
+	logr.Debug("debug message")
+	logr.Verbose("verbose message")
+	if buf.Len() != 0 {
+		t.Error("Nothing above Info should be logged at Info level")
+	}
+
+	logr.Info("info message")
+	if buf.Len() == 0 {
+		t.Error("Info should be logged at Info level")
+	}
+
+	buf.Reset()
+	logr.Warn("warn message")
+	if buf.Len() == 0 {
+		t.Error("Warn should be logged at Info level")
+	}
+
+	buf.Reset()
+	logr.Error("error message")
+	if buf.Len() == 0 {
+		t.Error("Error should be logged at Info level")
+	}
 
 }
 
-func TestTrace(_ /*t*/ *testing.T) {
+func TestTrace(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelTrace, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelTrace, LevelSet: true, Output: &buf})
 
 	logr.Trace("Trace message")
-	logr.Trace("Trace message\nwith newline")
+	output := buf.String()
+	if !strings.Contains(output, "T Trace message") {
+		t.Errorf("Expected trace message in output, got %q", output)
+	}
 
 }
 
-func TestTracef(_ /*t*/ *testing.T) {
+func TestTracef(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelTrace, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelTrace, LevelSet: true, Output: &buf})
 
 	logr.Tracef("Trace message: %s", "formatted")
-	logr.Tracef("Trace message: %s\nwith newline", "formatted")
+	output := buf.String()
+	if !strings.Contains(output, "T Trace message: formatted") {
+		t.Errorf("Expected formatted trace message in output, got %q", output)
+	}
 
 }
 
-func TestTraceLevel(_ /*t*/ *testing.T) {
+func TestTraceLevel(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelTrace, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelTrace, LevelSet: true, Output: &buf})
 
-	logr.Trace("TestTraceLevel trace message")
-	logr.Debug("TestTraceLevel debug message")
-	logr.Verbose("TestTraceLevel verbose message")
-	logr.Info("TestTraceLevel info message")
-	logr.Warn("TestTraceLevel warn message")
-	logr.Error("TestTraceLevel error message")
+	logr.Trace("trace message")
+	if buf.Len() == 0 {
+		t.Error("Trace should be logged at Trace level")
+	}
+
+	buf.Reset()
+	logr.Debug("debug message")
+	if buf.Len() == 0 {
+		t.Error("Debug should be logged at Trace level")
+	}
+
+	buf.Reset()
+	logr.Info("info message")
+	if buf.Len() == 0 {
+		t.Error("Info should be logged at Trace level")
+	}
 
 }
 
-func TestVerbose(_ /*t*/ *testing.T) {
+func TestVerbose(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelVerbose, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelSet: true, Output: &buf})
 
 	logr.Verbose("Verbose message")
-	logr.Verbose("Verbose message\nwith newline")
-	logr.Verbose("Verbose message2")
-	logr.Verbose("Verbose message2\nwith newline")
+	output := buf.String()
+	if !strings.Contains(output, "V Verbose message") {
+		t.Errorf("Expected verbose message in output, got %q", output)
+	}
 
 }
 
-func TestVerbosef(_ /*t*/ *testing.T) {
+func TestVerbosef(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelVerbose, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelSet: true, Output: &buf})
 
 	logr.Verbosef("Verbose message %s", "formatted")
-	logr.Verbosef("Verbose message %s\nwith newline", "formatted")
+	output := buf.String()
+	if !strings.Contains(output, "V Verbose message formatted") {
+		t.Errorf("Expected formatted verbose message in output, got %q", output)
+	}
 
 }
 
-func TestVerboseLevel(_ /*t*/ *testing.T) {
+func TestVerboseLevel(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelVerbose, LevelCount: 1, Output: os.Stderr})
+	// LevelCount 1: Verbose should log, Verbose2/3 should not
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelSet: true, LevelCount: 1, Output: &buf})
 
-	logr.Trace("TestVerboseLevel trace message")
-	logr.Debug("TestVerboseLevel debug message")
-	logr.Verbose("TestVerboseLevel verbose message")
-	logr.Verbose2("TestVerboseLevel verbose message2")
-	logr.Verbose3("TestVerboseLevel verbose message3")
-	logr.Verbosef("TestVerboseLevel verbose message\n")
-	logr.Verbosef2("TestVerboseLevel verbose message2\n")
-	logr.Verbosef3("TestVerboseLevel verbose message3\n")
-	logr.Info("TestVerboseLevel info message")
-	logr.Warn("TestVerboseLevel warn message")
-	logr.Error("TestVerboseLevel error message")
+	logr.Trace("trace message")
+	logr.Debug("debug message")
+	if buf.Len() != 0 {
+		t.Error("Trace/Debug should not be logged at Verbose level")
+	}
 
-	logr = NewWithOptions(ctx, Options{Level: LogLevelVerbose, LevelCount: 2, Output: os.Stderr})
+	logr.Verbose("verbose message")
+	if buf.Len() == 0 {
+		t.Error("Verbose should be logged at Verbose level")
+	}
 
-	logr.Trace("TestVerboseLevel trace message")
-	logr.Debug("TestVerboseLevel debug message")
-	logr.Verbose("TestVerboseLevel verbose message")
-	logr.Verbose2("TestVerboseLevel verbose message2")
-	logr.Verbose3("TestVerboseLevel verbose message3")
-	logr.Verbosef("TestVerboseLevel verbose message\n")
-	logr.Verbosef2("TestVerboseLevel verbose message2\n")
-	logr.Verbosef3("TestVerboseLevel verbose message3\n")
-	logr.Info("TestVerboseLevel info message")
-	logr.Warn("TestVerboseLevel warn message")
-	logr.Error("TestVerboseLevel error message")
+	buf.Reset()
+	logr.Verbose2("verbose2 message")
+	if buf.Len() != 0 {
+		t.Error("Verbose2 should not be logged at LevelCount 1")
+	}
 
-	logr = NewWithOptions(ctx, Options{Level: LogLevelVerbose, LevelCount: 3, Output: os.Stderr})
+	logr.Verbose3("verbose3 message")
+	if buf.Len() != 0 {
+		t.Error("Verbose3 should not be logged at LevelCount 1")
+	}
 
-	logr.Trace("TestVerboseLevel trace message")
-	logr.Debug("TestVerboseLevel debug message")
-	logr.Verbose("TestVerboseLevel verbose message")
-	logr.Verbose2("TestVerboseLevel verbose message2")
-	logr.Verbose3("TestVerboseLevel verbose message3")
-	logr.Verbosef("TestVerboseLevel verbose message\n")
-	logr.Verbosef2("TestVerboseLevel verbose message2\n")
-	logr.Verbosef3("TestVerboseLevel verbose message3\n")
-	logr.Info("TestVerboseLevel info message")
-	logr.Warn("TestVerboseLevel warn message")
-	logr.Error("TestVerboseLevel error message")
+	// LevelCount 2: Verbose and Verbose2 should log, Verbose3 should not
+	buf.Reset()
+	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelSet: true, LevelCount: 2, Output: &buf})
+
+	logr.Verbose("verbose message")
+	if buf.Len() == 0 {
+		t.Error("Verbose should be logged at LevelCount 2")
+	}
+
+	buf.Reset()
+	logr.Verbose2("verbose2 message")
+	if buf.Len() == 0 {
+		t.Error("Verbose2 should be logged at LevelCount 2")
+	}
+
+	buf.Reset()
+	logr.Verbose3("verbose3 message")
+	if buf.Len() != 0 {
+		t.Error("Verbose3 should not be logged at LevelCount 2")
+	}
+
+	// LevelCount 3: all Verbose levels should log
+	buf.Reset()
+	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelVerbose, LevelSet: true, LevelCount: 3, Output: &buf})
+
+	logr.Verbose3("verbose3 message")
+	if buf.Len() == 0 {
+		t.Error("Verbose3 should be logged at LevelCount 3")
+	}
 
 }
 
-func TestWarn(_ /*t*/ *testing.T) {
+func TestDebugLevelCount(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelWarn, Output: os.Stderr})
+	// LevelCount 1: Debug should log, Debug2/3 should not
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, LevelCount: 1, Output: &buf})
+
+	logr.Debug("debug message")
+	if buf.Len() == 0 {
+		t.Error("Debug should be logged at LevelCount 1")
+	}
+
+	buf.Reset()
+	logr.Debug2("debug2 message")
+	if buf.Len() != 0 {
+		t.Error("Debug2 should not be logged at LevelCount 1")
+	}
+
+	logr.Debug3("debug3 message")
+	if buf.Len() != 0 {
+		t.Error("Debug3 should not be logged at LevelCount 1")
+	}
+
+	// LevelCount 2: Debug and Debug2 should log
+	buf.Reset()
+	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, LevelCount: 2, Output: &buf})
+
+	logr.Debug2("debug2 message")
+	if buf.Len() == 0 {
+		t.Error("Debug2 should be logged at LevelCount 2")
+	}
+
+	buf.Reset()
+	logr.Debug3("debug3 message")
+	if buf.Len() != 0 {
+		t.Error("Debug3 should not be logged at LevelCount 2")
+	}
+
+	// LevelCount 3: all Debug levels should log
+	buf.Reset()
+	logr = NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, LevelCount: 3, Output: &buf})
+
+	logr.Debug3("debug3 message")
+	if buf.Len() == 0 {
+		t.Error("Debug3 should be logged at LevelCount 3")
+	}
+
+}
+
+func TestWarn(t *testing.T) {
+
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelWarn, LevelSet: true, Output: &buf})
 
 	logr.Warn("Warning message")
-	logr.Warn("Warning message\nwith newline")
+	output := buf.String()
+	if !strings.Contains(output, "W Warning message") {
+		t.Errorf("Expected warning message in output, got %q", output)
+	}
 
 }
 
-func TestWarnf(_ /*t*/ *testing.T) {
+func TestWarnf(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelWarn, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelWarn, LevelSet: true, Output: &buf})
 
 	logr.Warnf("Warning message: %s", "formatted")
-	logr.Warnf("Warning message: %s\nwith newline", "formatted")
+	output := buf.String()
+	if !strings.Contains(output, "W Warning message: formatted") {
+		t.Errorf("Expected formatted warning message in output, got %q", output)
+	}
 
 }
 
-func TestWarnLevel(_ /*t*/ *testing.T) {
+func TestWarnLevel(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelWarn, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelWarn, LevelSet: true, Output: &buf})
 
-	logr.Trace("TestWarnLevel trace message")
-	logr.Debug("TestWarnLevel debug message")
-	logr.Verbose("TestWarnLevel verbose message")
-	logr.Info("TestWarnLevel info message")
-	logr.Warn("TestWarnLevel warn message")
-	logr.Error("TestWarnLevel error message")
+	logr.Trace("trace message")
+	logr.Debug("debug message")
+	logr.Verbose("verbose message")
+	logr.Info("info message")
+	if buf.Len() != 0 {
+		t.Error("Nothing below Warn should be logged at Warn level")
+	}
+
+	logr.Warn("warn message")
+	if buf.Len() == 0 {
+		t.Error("Warn should be logged at Warn level")
+	}
+
+	buf.Reset()
+	logr.Error("error message")
+	if buf.Len() == 0 {
+		t.Error("Error should be logged at Warn level")
+	}
 
 }
-
-// func TestFatal(_ /*t*/ *testing.T) {
-
-// 	logr := NewWithOptions(Options{Level: LogLevelFatal, Output: os.Stderr})
-
-// 	origFatal := logFatal
-// 	defer func() { logFatal = origFatal }() // Restore original function
-
-// 	logFatal = func(writer Logger, a ...any) {
-// 		message := buildMessage(LogLevelFatal, a...)
-// 		_, err := writer.Write([]byte(message))
-
-// 		if err != nil {
-// 			panic(err)
-// 		}
-// 	}
-
-// 	logr.Fatal("Fatal message")
-// 	logr.Fatal("Fatal message\nwith newline")
-
-// 	return
-// }
 
 func TestJSON(t *testing.T) {
 
-	logr := NewWithOptions(ctx, Options{Level: LogLevelDebug, Output: os.Stderr})
+	var buf bytes.Buffer
+	logr := NewWithOptions(context.TODO(), Options{Level: LogLevelDebug, LevelSet: true, Output: &buf})
 
-	jsonString := "{\"key\": \"value\", \"number\": 123, \"boolean\": true, \"array\": [1, 2, 3], \"object\": {\"nestedKey\": \"nestedValue\"}}"
+	jsonString := `{"key": "value", "number": 123}`
 	var jsonData map[string]interface{}
 
 	json.Unmarshal([]byte(jsonString), &jsonData)
@@ -374,5 +509,78 @@ func TestJSON(t *testing.T) {
 	}
 
 	logr.Infof("Pretty JSON:\n%s", string(prettyJSON))
+
+	output := buf.String()
+	if !strings.Contains(output, "Pretty JSON:") {
+		t.Errorf("Expected JSON output, got %q", output)
+	}
+
+}
+
+func TestGetLoggerValuesFromString(t *testing.T) {
+
+	tests := []struct {
+		input      string
+		wantLevel  LogLevel
+		wantCount  int
+	}{
+		{"info", LogLevelInfo, 1},
+		{"verbose", LogLevelVerbose, 1},
+		{"verbose2", LogLevelVerbose, 2},
+		{"verbose3", LogLevelVerbose, 3},
+		{"debug", LogLevelDebug, 1},
+		{"debug2", LogLevelDebug, 2},
+		{"debug3", LogLevelDebug, 3},
+		{"warn", LogLevelWarn, 1},
+		{"warning", LogLevelWarn, 1},
+		{"error", LogLevelError, 1},
+		{"fatal", LogLevelFatal, 1},
+		{"unknown", LogLevelInfo, 1},
+		{"DEBUG", LogLevelDebug, 1},
+	}
+
+	for _, tt := range tests {
+		level, count := GetLoggerValuesFromString(tt.input)
+		if level != tt.wantLevel {
+			t.Errorf("GetLoggerValuesFromString(%q): level = %v, want %v", tt.input, level, tt.wantLevel)
+		}
+		if count != tt.wantCount {
+			t.Errorf("GetLoggerValuesFromString(%q): count = %d, want %d", tt.input, count, tt.wantCount)
+		}
+	}
+
+}
+
+func TestBuildMessageNonStringArgs(t *testing.T) {
+
+	// Ensure buildMessage handles non-string arguments without panicking
+	message := buildMessage(LogLevelInfo, 42, true, 3.14)
+	if !strings.Contains(message, "42") {
+		t.Errorf("Expected message to contain '42', got %q", message)
+	}
+
+}
+
+func TestFromContextNil(t *testing.T) {
+
+	ctx := context.TODO()
+	logr := FromContext(ctx)
+	if logr != nil {
+		t.Error("Expected nil logger from empty context")
+	}
+
+}
+
+func TestWithContextSameLogger(t *testing.T) {
+
+	ctx := context.TODO()
+	logr := New(ctx)
+	ctx = WithContext(ctx, logr)
+
+	// Calling WithContext with the same logger should return the same context
+	ctx2 := WithContext(ctx, logr)
+	if ctx2 != ctx {
+		t.Error("Expected same context when logger already exists")
+	}
 
 }

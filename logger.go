@@ -4,11 +4,11 @@ package logger
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync"
 	"time"
-	// "github.com/leftytennis/logger"
 )
 
 // LogLevel is a type for log levels
@@ -40,32 +40,23 @@ const (
 )
 
 var (
-	ctx           context.Context
-	loggerKey     = loggerKeyType{}
-	logLevelCount int
+	loggerKey = loggerKeyType{}
 )
-
-// var logFatal = Logger.Fatal
 
 // Logger is a custom log writer that adds a timestamp to each log entry
 type Logger struct {
-	Context    context.Context
 	Level      LogLevel
 	LevelCount int
-	Output     *os.File
-	m          *sync.Mutex
+	Output     io.Writer
+	m          sync.Mutex
 }
 
 // Options are options for the Logger
 type Options struct {
-	Context    context.Context
 	Level      LogLevel
 	LevelCount int
-	Output     *os.File
-}
-
-func init() {
-	ctx = context.TODO()
+	Output     io.Writer
+	LevelSet   bool // explicitly indicate that Level was set
 }
 
 func (l LogLevel) String() string {
@@ -81,7 +72,7 @@ func (l LogLevel) String() string {
 	case LogLevelTrace:
 		return "Trace"
 	case LogLevelVerbose:
-		return "Info" // LogLevelVerbose is treated as LogLevelInfo
+		return "Verbose"
 	case LogLevelWarn:
 		return "Warn"
 	default:
@@ -95,11 +86,11 @@ func buildMessage(l LogLevel, a ...any) string {
 
 	var message string
 
-	prefix := fmt.Sprintf(time.Now().Format(LogDateFormat)) + " " + l.String()[0:1] + " "
+	prefix := time.Now().Format(LogDateFormat) + " " + l.String()[0:1] + " "
 	prefixLength := len(prefix)
 
 	for _, v := range a {
-		lines := strings.Split(v.(string), "\n")
+		lines := strings.Split(fmt.Sprint(v), "\n")
 		for ix, line := range lines {
 			if line != "" {
 				if ix == 0 {
@@ -132,16 +123,13 @@ func FromContext(ctxParent context.Context) *Logger {
 	return nil
 }
 
-// GetLoggerValuesFromString returns the LogLevel and level count from a string (.i.e. "debug", "debug1"...)
+// GetLoggerValuesFromString returns the LogLevel and level count from a string (i.e. "debug", "debug1"...)
 func GetLoggerValuesFromString(levelStr string) (LogLevel, int) {
 
 	var logLevel LogLevel
 	var levelCount int = 1
 
-	levelCount = 1
-	logLevelEnv := strings.ToLower(os.Getenv("SWARMTROOPER_LOG_LEVEL"))
-
-	switch logLevelEnv {
+	switch strings.ToLower(levelStr) {
 	case "info":
 		logLevel = LogLevelInfo
 	case "verbose", "verbose1":
@@ -178,8 +166,8 @@ func GetLoggerValuesFromString(levelStr string) (LogLevel, int) {
 // New creates a new Logger
 func New(ctx context.Context) *Logger {
 	return NewWithOptions(ctx, Options{
-		Context:    ctx,
 		Level:      LogLevelInfo,
+		LevelSet:   true,
 		LevelCount: 1,
 		Output:     os.Stderr,
 	})
@@ -188,7 +176,7 @@ func New(ctx context.Context) *Logger {
 // NewWithOptions creates a new Logger with options
 func NewWithOptions(ctxParent context.Context, opts Options) *Logger {
 
-	if opts.Level == 0 {
+	if !opts.LevelSet && opts.Level == 0 {
 		opts.Level = LogLevelInfo
 	}
 
@@ -200,19 +188,15 @@ func NewWithOptions(ctxParent context.Context, opts Options) *Logger {
 		opts.Output = os.Stderr
 	}
 
-	logLevelCount = opts.LevelCount
-
 	// Create new logger
 	log := &Logger{
-		Context:    ctxParent,
 		Level:      opts.Level,
 		LevelCount: opts.LevelCount,
 		Output:     opts.Output,
-		m:          &sync.Mutex{},
 	}
 
 	// create new context and store logger value
-	ctx = WithContext(ctxParent, log)
+	WithContext(ctxParent, log)
 
 	return log
 }
@@ -220,11 +204,8 @@ func NewWithOptions(ctxParent context.Context, opts Options) *Logger {
 // WithContext returns a copy of the logger with the context set to ctx
 func WithContext(ctxParent context.Context, log *Logger) context.Context {
 
-	var value *Logger
-	var exists bool
-
 	// see if context already has the logger
-	if value, exists = ctxParent.Value(loggerKey).(*Logger); exists {
+	if value, exists := ctxParent.Value(loggerKey).(*Logger); exists {
 		if value == log {
 			return ctxParent
 		}
@@ -247,296 +228,182 @@ func (l *Logger) SetLevel(level LogLevel, levelCount int) {
 
 }
 
-// SetOutput sets the output file for the logger
-func (l *Logger) SetOutput(file *os.File) {
+// SetOutput sets the output writer for the logger
+func (l *Logger) SetOutput(w io.Writer) {
 
 	l.m.Lock()
 
-	if file == nil {
+	if w == nil {
 		l.Output = os.Stderr
 	} else {
-		l.Output = file
+		l.Output = w
 	}
 
 	l.m.Unlock()
-	l.Debugf("output set to %q\n", file.Name())
 
 }
 
-// Write writes a log entry to an output file (default: os.Stdout)
-func (l Logger) Write(bytes []byte) (int, error) {
-
-	if l.Output == nil {
-		panic("file is nil")
-	}
+// Write writes a log entry to an output writer (default: os.Stderr)
+func (l *Logger) Write(bytes []byte) (int, error) {
 
 	l.m.Lock()
 	defer l.m.Unlock()
 
-	if bytes[len(bytes)-1] != '\n' {
+	if l.Output == nil {
+		l.Output = os.Stderr
+	}
+
+	if len(bytes) > 0 && bytes[len(bytes)-1] != '\n' {
 		bytes = append(bytes, '\n')
 	}
 
 	return l.Output.Write(bytes)
 }
 
+// log is the internal method that handles level checking, message building, and writing
+func (l *Logger) log(level LogLevel, a ...any) {
+	if l.Level >= level {
+		message := buildMessage(level, a...)
+		l.Write([]byte(message))
+	}
+}
+
+// logf is the internal method for formatted log messages
+func (l *Logger) logf(level LogLevel, format string, a ...any) {
+	if l.Level >= level {
+		msg := fmt.Sprintf(format, a...)
+		message := buildMessage(level, msg)
+		l.Write([]byte(message))
+	}
+}
+
 // Debug logs a debug message
-func (l Logger) Debug(a ...any) {
-
-	if l.Level >= LogLevelDebug {
-		message := buildMessage(LogLevelDebug, a...)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func (l *Logger) Debug(a ...any) {
+	l.log(LogLevelDebug, a...)
 }
 
-// Debug2 logs a debug message when logLevelCount is >= 2 (-dd)
-func (l Logger) Debug2(a ...any) {
-
-	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && logLevelCount >= 2) {
-		l.Debug(a)
-	}
-
-}
-
-// Debug3 logs a debug message when logLevelCount is >= 3 (-ddd)
-func (l Logger) Debug3(a ...any) {
-
-	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && logLevelCount >= 3) {
+// Debug2 logs a debug message when LevelCount is >= 2 (-dd)
+func (l *Logger) Debug2(a ...any) {
+	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && l.LevelCount >= 2) {
 		l.Debug(a...)
 	}
+}
 
+// Debug3 logs a debug message when LevelCount is >= 3 (-ddd)
+func (l *Logger) Debug3(a ...any) {
+	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && l.LevelCount >= 3) {
+		l.Debug(a...)
+	}
 }
 
 // Debugf logs a debug message with a format string
-func (l Logger) Debugf(format string, a ...any) {
-
-	if l.Level >= LogLevelDebug {
-		msg := fmt.Sprintf(format, a...)
-		message := buildMessage(LogLevelDebug, msg)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func (l *Logger) Debugf(format string, a ...any) {
+	l.logf(LogLevelDebug, format, a...)
 }
 
-// Debugf2 logs a debug message with a format string when logLevelCount >= 2 (-dd)
-func (l Logger) Debugf2(format string, a ...any) {
-
-	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && logLevelCount >= 2) {
+// Debugf2 logs a debug message with a format string when LevelCount >= 2 (-dd)
+func (l *Logger) Debugf2(format string, a ...any) {
+	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && l.LevelCount >= 2) {
 		l.Debugf(format, a...)
 	}
-
 }
 
-// Debugf3 logs a debug message with a format string when logLevelCount >= 3 (-ddd)
-func (l Logger) Debugf3(format string, a ...any) {
-
-	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && logLevelCount >= 3) {
+// Debugf3 logs a debug message with a format string when LevelCount >= 3 (-ddd)
+func (l *Logger) Debugf3(format string, a ...any) {
+	if l.Level > LogLevelDebug || (l.Level == LogLevelDebug && l.LevelCount >= 3) {
 		l.Debugf(format, a...)
 	}
-
 }
 
 // Error logs an error message
-func (l Logger) Error(a ...any) {
-
-	if l.Level >= LogLevelError {
-		message := buildMessage(LogLevelError, a...)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func (l *Logger) Error(a ...any) {
+	l.log(LogLevelError, a...)
 }
 
 // Errorf logs an error message with a format string
-func (l Logger) Errorf(format string, a ...any) {
-
-	if l.Level >= LogLevelError {
-		msg := fmt.Sprintf(format, a...)
-		message := buildMessage(LogLevelError, msg)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func (l *Logger) Errorf(format string, a ...any) {
+	l.logf(LogLevelError, format, a...)
 }
 
 // Fatal logs a fatal message
-func (l Logger) Fatal(a ...any) {
-
+func (l *Logger) Fatal(a ...any) {
 	message := buildMessage(LogLevelFatal, a...)
-	_, err := l.Write([]byte(message))
-
-	if err != nil {
-		panic(err)
-	}
-
+	l.Write([]byte(message))
 	os.Exit(1)
 }
 
 // Fatalf logs a fatal message with a format string
-func (l Logger) Fatalf(format string, a ...any) {
-
+func (l *Logger) Fatalf(format string, a ...any) {
 	msg := fmt.Sprintf(format, a...)
 	message := buildMessage(LogLevelFatal, msg)
-	_, err := l.Write([]byte(message))
-
-	if err != nil {
-		panic(err)
-	}
-
+	l.Write([]byte(message))
 	os.Exit(1)
 }
 
 // Info logs an info message
-func (l Logger) Info(a ...any) {
-
-	if l.Level >= LogLevelInfo {
-		message := buildMessage(LogLevelInfo, a...)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func (l *Logger) Info(a ...any) {
+	l.log(LogLevelInfo, a...)
 }
 
 // Infof logs an info message with a format string
-func (l Logger) Infof(format string, a ...any) {
-
-	if l.Level >= LogLevelInfo {
-		msg := fmt.Sprintf(format, a...)
-		message := buildMessage(LogLevelInfo, msg)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func (l *Logger) Infof(format string, a ...any) {
+	l.logf(LogLevelInfo, format, a...)
 }
 
 // Trace logs a trace message
-func (l Logger) Trace(a ...any) {
-
-	if l.Level >= LogLevelTrace {
-		message := buildMessage(LogLevelTrace, a...)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func (l *Logger) Trace(a ...any) {
+	l.log(LogLevelTrace, a...)
 }
 
-// Tracef logs a warning message with a format string
-func (l Logger) Tracef(format string, a ...any) {
-
-	if l.Level >= LogLevelTrace {
-		msg := fmt.Sprintf(format, a...)
-		message := buildMessage(LogLevelTrace, msg)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+// Tracef logs a trace message with a format string
+func (l *Logger) Tracef(format string, a ...any) {
+	l.logf(LogLevelTrace, format, a...)
 }
 
 // Verbose logs a verbose message
-func (l Logger) Verbose(a ...any) {
-
-	if l.Level >= LogLevelVerbose {
-		message := buildMessage(LogLevelVerbose, a...)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func (l *Logger) Verbose(a ...any) {
+	l.log(LogLevelVerbose, a...)
 }
 
-// Verbose2 logs a verbose message when logLevelCount >= 2 (i.e., -vv)
-func (l Logger) Verbose2(a ...any) {
-
-	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && logLevelCount >= 2) {
+// Verbose2 logs a verbose message when LevelCount >= 2 (i.e., -vv)
+func (l *Logger) Verbose2(a ...any) {
+	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && l.LevelCount >= 2) {
 		l.Verbose(a...)
 	}
-
 }
 
-// Verbose3 logs a verbose message when logLevelCount >= 3 (i.e., -vvv)
-func (l Logger) Verbose3(a ...any) {
-
-	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && logLevelCount >= 3) {
+// Verbose3 logs a verbose message when LevelCount >= 3 (i.e., -vvv)
+func (l *Logger) Verbose3(a ...any) {
+	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && l.LevelCount >= 3) {
 		l.Verbose(a...)
 	}
-
 }
 
 // Verbosef logs a verbose message with a format string
-func (l Logger) Verbosef(format string, a ...any) {
-
-	if l.Level >= LogLevelVerbose {
-		msg := fmt.Sprintf(format, a...)
-		message := buildMessage(LogLevelVerbose, msg)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func (l *Logger) Verbosef(format string, a ...any) {
+	l.logf(LogLevelVerbose, format, a...)
 }
 
-// Verbosef2 logs a verbose message with a format string when logLevelCount >= 2 (i.e., -vv)
-func (l Logger) Verbosef2(format string, a ...any) {
-
-	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && logLevelCount >= 2) {
+// Verbosef2 logs a verbose message with a format string when LevelCount >= 2 (i.e., -vv)
+func (l *Logger) Verbosef2(format string, a ...any) {
+	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && l.LevelCount >= 2) {
 		l.Verbosef(format, a...)
 	}
-
 }
 
-// Verbosef3 logs a verbose message with a format string when logLevelCount >= 3 (i.e., -vvv)
-func (l Logger) Verbosef3(format string, a ...any) {
-
-	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && logLevelCount >= 3) {
+// Verbosef3 logs a verbose message with a format string when LevelCount >= 3 (i.e., -vvv)
+func (l *Logger) Verbosef3(format string, a ...any) {
+	if l.Level > LogLevelVerbose || (l.Level == LogLevelVerbose && l.LevelCount >= 3) {
 		l.Verbosef(format, a...)
 	}
-
 }
 
 // Warn logs a warning message
-func (l Logger) Warn(a ...any) {
-
-	if l.Level >= LogLevelWarn {
-		message := buildMessage(LogLevelWarn, a...)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func (l *Logger) Warn(a ...any) {
+	l.log(LogLevelWarn, a...)
 }
 
 // Warnf logs a warning message with a format string
-func (l Logger) Warnf(format string, a ...any) {
-
-	if l.Level >= LogLevelWarn {
-		msg := fmt.Sprintf(format, a...)
-		message := buildMessage(LogLevelWarn, msg)
-		_, err := l.Write([]byte(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func (l *Logger) Warnf(format string, a ...any) {
+	l.logf(LogLevelWarn, format, a...)
 }
