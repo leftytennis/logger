@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -61,17 +62,15 @@ func TestSetLevel(t *testing.T) {
 
 }
 
-func TestSetLevelConfirmationVisible(t *testing.T) {
+func TestSetLevelNoOutput(t *testing.T) {
 
 	var buf bytes.Buffer
 	logr := NewWithOptions(Options{Level: LevelInfo, Output: &buf})
 
-	// Set to Error level — confirmation should still be visible
 	logr.SetLevel(LevelError, 1)
 
-	output := buf.String()
-	if !strings.Contains(output, "log level set to Error") {
-		t.Errorf("Expected SetLevel confirmation message, got %q", output)
+	if buf.Len() != 0 {
+		t.Errorf("Expected no output from SetLevel, got %q", buf.String())
 	}
 
 }
@@ -579,7 +578,7 @@ func TestJSON(t *testing.T) {
 	logr := NewWithOptions(Options{Level: LevelDebug, Output: &buf})
 
 	jsonString := `{"key": "value", "number": 123}`
-	var jsonData map[string]interface{}
+	var jsonData map[string]any
 
 	json.Unmarshal([]byte(jsonString), &jsonData)
 
@@ -774,7 +773,7 @@ func TestConcurrentAccess(t *testing.T) {
 	logr := NewWithOptions(Options{Level: LevelTrace, LevelCount: 3, Output: &buf})
 
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -788,5 +787,256 @@ func TestConcurrentAccess(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+
+}
+
+func TestSetOutputNil(t *testing.T) {
+
+	logr := New()
+	logr.SetOutput(nil)
+
+	// Should not panic; nil falls back to stderr
+	logr.Info("fallback to stderr")
+
+}
+
+func TestWriteRawBytes(t *testing.T) {
+
+	var buf bytes.Buffer
+	logr := NewWithOptions(Options{Level: LevelInfo, Output: &buf})
+
+	// Write implements io.Writer — raw bytes pass through with a trailing newline
+	n, err := logr.Write([]byte("raw message"))
+	if err != nil {
+		t.Fatalf("Write returned error: %v", err)
+	}
+	if n == 0 {
+		t.Error("Expected non-zero bytes written")
+	}
+	output := buf.String()
+	if !strings.Contains(output, "raw message") {
+		t.Errorf("Expected raw message in output, got %q", output)
+	}
+	if output[len(output)-1] != '\n' {
+		t.Error("Expected trailing newline")
+	}
+
+}
+
+func TestWriteAlreadyNewline(t *testing.T) {
+
+	var buf bytes.Buffer
+	logr := NewWithOptions(Options{Level: LevelInfo, Output: &buf})
+
+	logr.Write([]byte("message\n"))
+	output := buf.String()
+	if strings.HasSuffix(output, "\n\n") {
+		t.Error("Write should not double the trailing newline")
+	}
+
+}
+
+func TestBuildMessageNoArgs(t *testing.T) {
+
+	message := buildMessage(LevelInfo)
+	if !strings.Contains(message, " I ") {
+		t.Errorf("Expected Info prefix in empty message, got %q", message)
+	}
+	if message[len(message)-1] != '\n' {
+		t.Error("Expected trailing newline")
+	}
+
+}
+
+func TestLevelStringUnknown(t *testing.T) {
+
+	unknown := Level(99)
+	if unknown.String() != "Unknown" {
+		t.Errorf("Expected 'Unknown' for invalid level, got %q", unknown.String())
+	}
+
+}
+
+func TestParseLevelWhitespace(t *testing.T) {
+
+	level, count, err := ParseLevel("  debug  ")
+	if err != nil {
+		t.Fatalf("ParseLevel with whitespace returned error: %v", err)
+	}
+	if level != LevelDebug {
+		t.Errorf("Expected LevelDebug, got %v", level)
+	}
+	if count != 1 {
+		t.Errorf("Expected count 1, got %d", count)
+	}
+
+}
+
+func TestHigherLevelEnablesLowerSubLevels(t *testing.T) {
+
+	// When set to Trace, all Debug sub-levels should be enabled
+	var buf bytes.Buffer
+	logr := NewWithOptions(Options{Level: LevelTrace, LevelCount: 1, Output: &buf})
+
+	logr.Debug2("debug2 at trace level")
+	if buf.Len() == 0 {
+		t.Error("Debug2 should be logged when logger is set to Trace (higher level)")
+	}
+
+	buf.Reset()
+	logr.Debug3("debug3 at trace level")
+	if buf.Len() == 0 {
+		t.Error("Debug3 should be logged when logger is set to Trace (higher level)")
+	}
+
+	buf.Reset()
+	logr.Verbose3("verbose3 at trace level")
+	if buf.Len() == 0 {
+		t.Error("Verbose3 should be logged when logger is set to Trace (higher level)")
+	}
+
+}
+
+func TestWriteEmptyBytes(t *testing.T) {
+
+	var buf bytes.Buffer
+	logr := NewWithOptions(Options{Level: LevelInfo, Output: &buf})
+
+	n, err := logr.Write([]byte{})
+	if err != nil {
+		t.Fatalf("Write of empty bytes returned error: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("Expected 0 bytes written for empty input, got %d", n)
+	}
+
+}
+
+func TestDebugf2(t *testing.T) {
+
+	var buf bytes.Buffer
+	logr := NewWithOptions(Options{Level: LevelDebug, LevelCount: 2, Output: &buf})
+
+	logr.Debugf2("debug2 %s", "formatted")
+	output := buf.String()
+	if !strings.Contains(output, "D debug2 formatted") {
+		t.Errorf("Expected formatted debug2 message, got %q", output)
+	}
+
+}
+
+func TestDebugf3(t *testing.T) {
+
+	var buf bytes.Buffer
+	logr := NewWithOptions(Options{Level: LevelDebug, LevelCount: 3, Output: &buf})
+
+	logr.Debugf3("debug3 %s", "formatted")
+	output := buf.String()
+	if !strings.Contains(output, "D debug3 formatted") {
+		t.Errorf("Expected formatted debug3 message, got %q", output)
+	}
+
+}
+
+func TestVerbosef2(t *testing.T) {
+
+	var buf bytes.Buffer
+	logr := NewWithOptions(Options{Level: LevelVerbose, LevelCount: 2, Output: &buf})
+
+	logr.Verbosef2("verbose2 %s", "formatted")
+	output := buf.String()
+	if !strings.Contains(output, "V verbose2 formatted") {
+		t.Errorf("Expected formatted verbose2 message, got %q", output)
+	}
+
+}
+
+func TestVerbosef3(t *testing.T) {
+
+	var buf bytes.Buffer
+	logr := NewWithOptions(Options{Level: LevelVerbose, LevelCount: 3, Output: &buf})
+
+	logr.Verbosef3("verbose3 %s", "formatted")
+	output := buf.String()
+	if !strings.Contains(output, "V verbose3 formatted") {
+		t.Errorf("Expected formatted verbose3 message, got %q", output)
+	}
+
+}
+
+func TestFatalLevel(t *testing.T) {
+
+	// Fatal should always log regardless of the configured level
+	var buf bytes.Buffer
+	var exitCode int
+	logr := NewWithOptions(Options{Level: LevelFatal, Output: &buf})
+	logr.exitFunc = func(code int) { exitCode = code }
+
+	logr.Fatal("fatal at fatal level")
+
+	if buf.Len() == 0 {
+		t.Error("Fatal should always be logged")
+	}
+	if exitCode != 1 {
+		t.Errorf("Expected exit code 1, got %d", exitCode)
+	}
+
+}
+
+func TestLogMultipleArgs(t *testing.T) {
+
+	var buf bytes.Buffer
+	logr := NewWithOptions(Options{Level: LevelInfo, Output: &buf})
+
+	logr.Info("count:", 42, "flag:", true)
+	output := buf.String()
+	if !strings.Contains(output, "count: 42 flag: true") {
+		t.Errorf("Expected space-separated args, got %q", output)
+	}
+
+}
+
+func TestGetLevelCount(t *testing.T) {
+
+	logr := NewWithOptions(Options{Level: LevelDebug, LevelCount: 2})
+	if logr.GetLevelCount() != 2 {
+		t.Errorf("Expected level count 2, got %d", logr.GetLevelCount())
+	}
+
+	logr.SetLevel(LevelTrace, 3)
+	if logr.GetLevelCount() != 3 {
+		t.Errorf("Expected level count 3 after SetLevel, got %d", logr.GetLevelCount())
+	}
+
+}
+
+func TestParseLevelAllLevels(t *testing.T) {
+
+	// Verify all Level.String() round-trips through ParseLevel
+	levels := []struct {
+		level Level
+		name  string
+	}{
+		{LevelFatal, "fatal"},
+		{LevelError, "error"},
+		{LevelWarn, "warn"},
+		{LevelInfo, "info"},
+		{LevelVerbose, "verbose"},
+		{LevelDebug, "debug"},
+		{LevelTrace, "trace"},
+	}
+
+	for _, tt := range levels {
+		level, _, err := ParseLevel(tt.name)
+		if err != nil {
+			t.Errorf("ParseLevel(%q) returned error: %v", tt.name, err)
+		}
+		if level != tt.level {
+			t.Errorf("ParseLevel(%q) = %v, want %v", tt.name, level, tt.level)
+		}
+		if level.String() != fmt.Sprintf("%s%s", strings.ToUpper(tt.name[:1]), tt.name[1:]) {
+			t.Errorf("Level(%d).String() = %q, want title-cased %q", level, level.String(), tt.name)
+		}
+	}
 
 }

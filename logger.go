@@ -96,6 +96,7 @@ func buildMessage(l Level, a ...any) string {
 	lines := strings.Split(combined, "\n")
 
 	var b strings.Builder
+	b.Grow(len(prefix) + len(combined) + len(lines)*len(padding))
 	for i, line := range lines {
 		// Skip only a trailing empty element produced by a terminal newline
 		if i == len(lines)-1 && line == "" {
@@ -136,7 +137,7 @@ func ParseLevel(s string) (Level, int, error) {
 	var logLevel Level
 	var levelCount int = 1
 
-	switch strings.ToLower(s) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "info":
 		logLevel = LevelInfo
 	case "verbose", "verbose1":
@@ -242,18 +243,13 @@ func (l *Logger) GetLevelCount() int {
 	return count
 }
 
-// SetLevel sets the log level and writes a confirmation message at the new level
+// SetLevel sets the log level
 func (l *Logger) SetLevel(level Level, levelCount int) {
 
 	l.m.Lock()
 	l.level = level
 	l.levelCount = levelCount
 	l.m.Unlock()
-
-	// Write the confirmation message unconditionally using the new level
-	// so it's always visible regardless of what the new level is
-	message := buildMessage(level, fmt.Sprintf("log level set to %s", level.String()))
-	l.Write([]byte(message))
 }
 
 // SetOutput sets the output writer for the logger
